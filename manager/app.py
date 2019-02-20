@@ -1,6 +1,10 @@
-import flask 
+import flask
+from flask_cors import CORS
+
 
 app = flask.Flask(__name__)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
 app.config['DEBUG'] = True
 
 @app.route('/', methods = ['GET'])
