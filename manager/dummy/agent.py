@@ -96,3 +96,6 @@ class Agent():
 
 	def getInterfaces(self):
 		return self._interfaces
+
+	def getDict(self):
+		return self.__dict__

@@ -1,71 +1,49 @@
 import flask
 from flask_cors import CORS
+from dummy.manager import ManagerSNMP
+from dummy.agent import Agent
 
+manager = None
 
 app = flask.Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.config['DEBUG'] = True
 
-@app.route('/', methods = ['GET'])
+@app.route('/', methods = ['GET','POST'])
 def home():
-	a = {
-		'host':'10.100.74.70',
-		'version':'2',
-		'port':'161',
-		'community':'gr_4cm2'
-	}
-	return flask.jsonify(a)
+	return flask.jsonify(manager.getDict())
 
-@app.route('/info/<host>', methods = ['GET', 'POST'])
-def info(host):
-	print host
-	if flask.request.method == 'POST':
-		return flask.jsonify(info_post(host))
-	else:
-		return flask.jsonify(info_get(host))
+@app.route('/add', methods = ['POST'])
+def addAgent():
+	try:
+		data = flask.request.get_json()
+		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
+		manager.addAgent(agent)
+		if (manager.getBasicData(data['host'])):
+			return flask.redirect('/')
+		else:
+			return flask.redirect('/error/NoConnected')
+	except:
+		return flask.redirect('/error/format')
 
-
-@app.route('/json_example', methods = ['POST'])
-def json_example():
-	print(flask.request.is_json)
-	req_data = flask.request.get_json()
-	print req_data
-	a = flask.jsonify(req_data)
-	a = {
-		'host':'10.100.74.70',
-		'version':'2',
-		'port':'161',
-		'community':'gr_4cm2'
-	}
-	return a
+@app.route('/delete', methods = ['POST'])
+def deleteAgent():
+	try:
+		data = flask.request.get_json()
+		manager.delAgent(data['host'])
+		return flask.jsonify({'status':True})
+	except:
+		return flask.redirect('/error/format')
 
 
-
-def info_post(host):
-	a = {
-		'host':'10.100.74.70',
-		'version':'2',
-		'port':'161',
-		'community':'gr_4cm2'
-	}
-	a[',method'] = 'POST'
-	a['len'] = len(host)
-	a['saludos'] = 'Hola mundo'
-	return a
-
-def info_get(host):
-	a = {
-		'host':'10.100.74.70',
-		'version':'2',
-		'port':'161',
-		'community':'gr_4cm2'
-	}
-	a[',method'] = 'GET'
-	a['len'] = len(host)
-	a['saludos'] = 'adios'
-	return a
+@app.route('/error/<typeE>', methods = ['GET', 'POST'])
+def error(typeE):
+	data = {}
+	data['error'] = typeE
+	return flask.jsonify(data)
 
 
 if __name__ == '__main__':
+	manager = ManagerSNMP()
 	app.run(host = '0.0.0.0', port = '8080')

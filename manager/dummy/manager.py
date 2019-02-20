@@ -17,6 +17,7 @@ class Manager():
 	def delAgent(self, hostname):
 		try:
 			del self._agents[hostname]
+			print 'delete'
 			return True
 		except:
 			return False
@@ -49,7 +50,6 @@ class Manager():
 				print 'UpTime: ' + agent.getUpTimeF()
 
 			i += 1
-
 
 class ManagerSNMP(Manager):
 	_querys = {
@@ -84,11 +84,13 @@ class ManagerSNMP(Manager):
 				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Localization'])),
 				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NumInterFs'])))
 		)
-
 		if eIndi:
+			self._agents[hostname].setStatus(False)
 			print eIndi
+			return False
 		elif eStatus:
 			print eIndex, eStatus
+			return False
 		else:
 			i = 0
 			for varBind in vBinds:
@@ -106,6 +108,7 @@ class ManagerSNMP(Manager):
 				else:
 					print 'Error'
 				i += 1
+			return True
 
 	def _getAgentInterFs(self, hostname):
 		flag = True
@@ -154,8 +157,10 @@ class ManagerSNMP(Manager):
 		)
 		if eIndi:
 			print eIndi
+			return
 		elif eStatus:
 			print eIndex, eStatus
+			return
 		else:
 			i = 0
 			for varBind in vBinds:
@@ -174,6 +179,16 @@ class ManagerSNMP(Manager):
 	def getAgentsData(self):
 		for host in self._agents:
 			self.getAgentData(host)
+
+	def getDict(self):
+		self.getAgentsData()
+		data = {}
+		data['num_device'] = self._numAgents
+		data['devices'] = []
+		for host in self._agents:
+			agent = self._agents[host]
+			data['devices'].append(agent.getDict())
+		return data
 
 def main():
 	hosts = []
