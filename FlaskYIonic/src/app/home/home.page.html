@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      Prueba Flask & Ionic
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+
+  <ion-card >
+    <img src="../../assets/img/escom.png" alt="">
+  <ion-card-header>
+    <ion-card-title>Conexion con servidor</ion-card-title>
+  </ion-card-header>
+
+  <ion-card-content>
+    <ion-input placeholder="Direccion IP" [(ngModel)]="ipAdd"></ion-input>
+    <ion-input type="number" placeholder="Puerto" [(ngModel)]="port"></ion-input>
+
+    <ion-button expand="block" (click)="irAConsulta()">Conectar</ion-button>
+    <div *ngIf="showAlert">
+      <br>
+      <ion-text color="danger">
+        <h4 >Error, alguno de los datos no ha sido proporcionado</h4>
+      </ion-text>
+      <p color="danger"></p>
+    </div>
+  </ion-card-content>
+</ion-card>
+
+
+
+
+</ion-content>

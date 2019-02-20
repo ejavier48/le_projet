@@ -1,0 +1,7 @@
+{
+  "name": "FlaskYIonic",
+  "integrations": {
+    "cordova": {}
+  },
+  "type": "angular"
+}
