@@ -73,108 +73,117 @@ class ManagerSNMP(Manager):
 		Manager.__init__(self)
 
 	def getBasicData(self, hostname):
-		eIndi, eStatus, eIndex, vBinds = next(
-			getCmd(SnmpEngine(),
-				CommunityData(self._agents[hostname].getCommunity()), 
-				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-				ContextData(),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Info'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Contact'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NodeName'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Localization'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NumInterFs'])))
-		)
-		if eIndi:
-			self._agents[hostname].setStatus(False)
-			print eIndi
+		try:
+			eIndi, eStatus, eIndex, vBinds = next(
+				getCmd(SnmpEngine(),
+					CommunityData(self._agents[hostname].getCommunity()), 
+					UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+					ContextData(),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Info'])),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Contact'])),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NodeName'])),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['Localization'])),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NumInterFs'])))
+			)
+			if eIndi:
+				self._agents[hostname].setStatus(False)
+				print eIndi
+				return False
+			elif eStatus:
+				print eIndex, eStatus
+				return False
+			else:
+				i = 0
+				for varBind in vBinds:
+					a = [x.prettyPrint() for x in varBind]
+					if i == 0:
+						self._agents[hostname].setInfo(a[1])
+					elif i == 1:
+						self._agents[hostname].setContact(a[1])
+					elif i == 2:
+						self._agents[hostname].setNode(a[1])
+					elif i == 3:
+						self._agents[hostname].setLocalization(a[1])
+					elif i == 4:
+						self._agents[hostname].setNumInterFs(int(a[1]))
+					else:
+						print 'Error'
+					i += 1
+				return True
+		except:
 			return False
-		elif eStatus:
-			print eIndex, eStatus
-			return False
-		else:
-			i = 0
-			for varBind in vBinds:
-				a = [x.prettyPrint() for x in varBind]
-				if i == 0:
-					self._agents[hostname].setInfo(a[1])
-				elif i == 1:
-					self._agents[hostname].setContact(a[1])
-				elif i == 2:
-					self._agents[hostname].setNode(a[1])
-				elif i == 3:
-					self._agents[hostname].setLocalization(a[1])
-				elif i == 4:
-					self._agents[hostname].setNumInterFs(int(a[1]))
-				else:
-					print 'Error'
-				i += 1
-			return True
 
 	def _getAgentInterFs(self, hostname):
 		flag = True
-		walk = nextCmd(SnmpEngine(),
-			CommunityData(self._agents[hostname].getCommunity()),
-			UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-			ContextData(), 
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
-			)
-		n = self._agents[hostname].getNumInterFs()
-		interfaces = []
-		for i in range(n):
-			eIndi, eStatus, eIndex, vBinds = next(walk)
-			if eIndi:
-				print eIndi
-				flag = False
-			elif eStatus:
-				print eIndex, eStatus
-				flag = False
-			else:
-				data = 0
-				interface = {}
-				for varBind in vBinds:
-					a = [x.prettyPrint() for x in varBind]
-					if data == 0:
-						interface['name'] = a[1]
-						data += 1
-					elif data == 1:
-						interface['status'] = 'Up' if a[1] == '1' else 'Down'
-						data += 1
-					else:
-						print 'Error'
-				interfaces.append(interface)
-		self._agents[hostname].setInterfaces(interfaces)
+		try:
+			walk = nextCmd(SnmpEngine(),
+				CommunityData(self._agents[hostname].getCommunity()),
+				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+				ContextData(), 
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
+				)
+			n = self._agents[hostname].getNumInterFs()
+			interfaces = []
+			for i in range(n):
+				eIndi, eStatus, eIndex, vBinds = next(walk)
+				if eIndi:
+					print eIndi
+					flag = False
+				elif eStatus:
+					print eIndex, eStatus
+					flag = False
+				else:
+					data = 0
+					interface = {}
+					for varBind in vBinds:
+						a = [x.prettyPrint() for x in varBind]
+						if data == 0:
+							interface['name'] = a[1]
+							data += 1
+						elif data == 1:
+							interface['status'] = 'Up' if a[1] == '1' else 'Down'
+							data += 1
+						else:
+							print 'Error'
+					interfaces.append(interface)
+			self._agents[hostname].setInterfaces(interfaces)
+		except:
+			flag = False
 		return flag
 
 	def getAgentData(self, hostname):
 		self._agents[hostname].setStatus(False)
-		eIndi, eStatus, eIndex, vBinds = next(
-			getCmd(SnmpEngine(),
-				CommunityData(self._agents[hostname].getCommunity()), 
-				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-				ContextData(),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])))
-		)
-		if eIndi:
-			print eIndi
-			return
-		elif eStatus:
-			print eIndex, eStatus
-			return
-		else:
-			i = 0
-			for varBind in vBinds:
-				a = [x.prettyPrint() for x in varBind]
-				self._agents[hostname].setUpTime(int(a[1]))
-				#if i == 0:
-				#	self._agents[hostname].setUpTime(int(a[1]))
-				#	i += 1
-				#elif i == 1:
-				#	self._agents[hostname].setNumInterFs(int(a[1]))
-				#	i += 1
-				#else:
-				#	print "Error"
-			self._agents[hostname].setStatus(self._getAgentInterFs(hostname))
+		try:
+			eIndi, eStatus, eIndex, vBinds = next(
+				getCmd(SnmpEngine(),
+					CommunityData(self._agents[hostname].getCommunity()), 
+					UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+					ContextData(),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])))
+			)
+			if eIndi:
+				print eIndi
+				return
+			elif eStatus:
+				print eIndex, eStatus
+				return
+			else:
+				i = 0
+				for varBind in vBinds:
+					a = [x.prettyPrint() for x in varBind]
+					self._agents[hostname].setUpTime(int(a[1]))
+					#if i == 0:
+					#	self._agents[hostname].setUpTime(int(a[1]))
+					#	i += 1
+					#elif i == 1:
+					#	self._agents[hostname].setNumInterFs(int(a[1]))
+					#	i += 1
+					#else:
+					#	print "Error"
+				self._agents[hostname].setStatus(self._getAgentInterFs(hostname))
+		except:
+			print "Error in data"
 
 	def getAgentsData(self):
 		for host in self._agents:
