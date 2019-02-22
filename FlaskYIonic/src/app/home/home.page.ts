@@ -20,18 +20,24 @@ export class HomePage {
   }
 
   irAConsulta(){
-      if(this.ipAdd=="" || this.port==""){
-        console.log(this.ipAdd);
-        console.log(this.port);
-        console.log("error");
-        this.showAlert = true;
+    if(this.ipAdd=="" || this.port==""){
+      console.log(this.ipAdd);
+      console.log(this.port);
+      console.log("error");
+      this.showAlert = true;
 
 
-      }
-      else{
-        this.router.navigate(['/consulta',this.ipAdd, this.port]);
-        this.showAlert = false ;
-      }
+    }
+    else{
+      this.router.navigate(['/menu',this.ipAdd, this.port,'menu','menu','consulta',this.ipAdd, this.port]);
+      this.showAlert = false ;
+      
+    }
+
+
+
   }
+
+
 
 }

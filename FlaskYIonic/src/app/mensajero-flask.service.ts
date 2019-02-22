@@ -1,21 +1,16 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError, timer } from 'rxjs';
+import { Observable } from 'rxjs';
 
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
-import {
-  timeout,
-  retryWhen,
-  take,
-  concat,
-  share,
-  delayWhen
-} from 'rxjs/operators';
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class MensajeroFlaskService {
+static  ipAdd:string;
+static  puerto:string;
 
   constructor( private http2: HttpClient) {
 

@@ -8,8 +8,7 @@ import { Router } from "@angular/router";
 //para mostrar el loading
 import { LoadingController } from '@ionic/angular';
 //mostrar alerta
-import { AlertController } from '@ionic/angular';
-
+import { AlertController } from '@ionic/angular'; 
 
 @Component({
   selector: 'app-consulta',
@@ -53,6 +52,11 @@ export class ConsultaPage implements OnInit {
         this.router.navigate(['/']);
           loading.dismiss();
           this.presentAlert(JSON.stringify(err));
+
+
+
+          MensajeroFlaskService.ipAdd=null;
+          MensajeroFlaskService.puerto=null;
       });
   }
 
