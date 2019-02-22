@@ -17,6 +17,7 @@ class Manager():
 	def delAgent(self, hostname):
 		try:
 			del self._agents[hostname]
+			self._numAgents -= 1
 			print 'delete'
 			return True
 		except:
