@@ -18,7 +18,7 @@ import { Router } from "@angular/router";
 export class MensajeroFlaskService {
   ipAdd:string;
   puerto:string;
-
+  agenteConsultado:any;
   constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router) {
 
 
@@ -33,7 +33,7 @@ getData(ipAdd:string, port:string):Observable<any>{
     return (response1);
 }
 
-async addAgent(ipAdd:string, comunidad:string, version:string){
+async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
   const loading = await this.loadcont.create({
     message: 'Agregando'
   });
@@ -42,7 +42,7 @@ async addAgent(ipAdd:string, comunidad:string, version:string){
   let postData = {
             "host": ipAdd,
             "version": version,
-            "port": "161",
+            "port": puerto,
             "community": comunidad
     }
 
@@ -51,7 +51,7 @@ async addAgent(ipAdd:string, comunidad:string, version:string){
           loading.dismiss();
           if(JSON.stringify(res).includes("error")){
             this.presentAlert("Oops!","Parece que hubo un error al agregar el agente :c");
-              this.deleteAgent(ipAdd);
+              this.deleteAgent(ipAdd,0);
           }
           else{
             this.presentAlert("Perfecto!","Agente dado de alta con exito");
@@ -67,12 +67,18 @@ async addAgent(ipAdd:string, comunidad:string, version:string){
 
 }
 
-async deleteAgent(ipAdd:string){
+async deleteAgent(ipAdd:string, bandera:number) {
   console.log("entre a delete");
   this.http2.post('http://'+this.ipAdd+':'+this.puerto+'/delete',{"host":ipAdd}).subscribe(res=>{
     console.log("elimino el error")
+    if(bandera==1){
+        this.presentAlert("Agente eliminado","Se elimino el agente con exito");
+    }
+
   }, err=>{
     console.log("error al eliminar "+err)
+    if(bandera==1)
+      this.presentAlert("Oops!","No pude eliminar al agente");
   })
 }
 

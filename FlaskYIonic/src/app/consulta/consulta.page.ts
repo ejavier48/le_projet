@@ -10,6 +10,8 @@ import { LoadingController } from '@ionic/angular';
 //mostrar alerta
 import { AlertController } from '@ionic/angular';
 
+
+
 @Component({
   selector: 'app-consulta',
   templateUrl: './consulta.page.html',
@@ -107,6 +109,23 @@ clasificarSOAgente(indice:number){
     this.agentes[indice]._os='1';
   }
 }
+
+  eliminar(indice:number){
+      //console.log(this.agentes[indice]._hostName);
+      let eliminado=this.FlaskService.deleteAgent(this.agentes[indice]._hostName,1);
+      this.numeroAgentes--;
+      delete this.agentes[indice];
+      if(this.numeroAgentes==0){
+        this.weHaveData=false;
+      }
+  }
+
+  consultarAgente(indice:number){
+    console.log("voy a consultar a "+indice);
+    this.FlaskService.agenteConsultado=this.agentes[indice];
+    this.router.navigate(['/ver-agente',indice]);
+  }
+
 
   async presentAlert(mensaje:string) {
   const alert = await this.alertController.create({

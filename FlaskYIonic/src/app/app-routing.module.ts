@@ -5,7 +5,8 @@ const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'home', loadChildren: './home/home.module#HomePageModule' },
   //{ path: 'consulta/:ipAdd/:port', loadChildren: './consulta/consulta.module#ConsultaPageModule' },
-  { path: 'menu/:ipAdd/:port', loadChildren: './menu/menu.module#MenuPageModule' }
+  { path: 'menu/:ipAdd/:port', loadChildren: './menu/menu.module#MenuPageModule' },
+  { path: 'ver-agente/:indice', loadChildren: './ver-agente/ver-agente.module#VerAgentePageModule' }
 
 ];
 

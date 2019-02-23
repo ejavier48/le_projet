@@ -12,12 +12,14 @@ export class AddAgentPage implements OnInit {
   ipAdd:string;
   comunidad:string;
   version:string;
+  puerto:string;
   showAlert:boolean;
 
   constructor(private mensajeFlask: MensajeroFlaskService) {
     this.ipAdd="";
     this.comunidad="";
     this.version="";
+    this.puerto="";
     this.showAlert=false;
   }
 
@@ -25,12 +27,12 @@ export class AddAgentPage implements OnInit {
   }
 
   agregarAgente(){
-    if(this.ipAdd=="" || this.comunidad=="" ||this.version==""){
+    if(this.ipAdd=="" || this.comunidad=="" ||this.version=="" || this.puerto==""){
       this.showAlert = true;
 
     }
     else{
-      this.mensajeFlask.addAgent(this.ipAdd,this.comunidad, this.version);
+      this.mensajeFlask.addAgent(this.ipAdd,this.comunidad, this.version, this.puerto);
       this.showAlert = false ;
 
     }

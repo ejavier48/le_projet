@@ -18,7 +18,7 @@
   </ion-text>
   <div *ngIf="weHaveData">
 
-    <ion-card  *ngFor="let data of agentes">
+    <ion-card  *ngFor="let data of agentes; let i=index">
     <img src="../../assets/img/windows.svg" *ngIf="data['_os']=='1'"/>
     <img src="../../assets/img/linux.svg" *ngIf="data['_os']=='2' "/>
     <img src="../../assets/img/mac.svg" *ngIf="data['_os']=='3'"/>
@@ -45,13 +45,13 @@
     </ion-card-content>
     <ion-row no-padding>
         <ion-col>
-          <ion-button ion-button fill="clear" size="small" color="danger" icon-start>
+          <ion-button ion-button fill="clear" size="small" color="danger" icon-start (click)="eliminar(i)">
             <ion-icon name='trash'></ion-icon>
               Eliminar
           </ion-button>
         </ion-col>
         <ion-col text-center>
-          <ion-button ion-button fill="clear" size="small" color="primary" icon-start>
+          <ion-button ion-button fill="clear" size="small" color="primary" icon-start (click)="consultarAgente(i)">
             <ion-icon name='analytics'></ion-icon>
               Consultar
           </ion-button>
