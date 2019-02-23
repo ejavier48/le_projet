@@ -1,26 +1,69 @@
-<ion-header>
-  <ion-toolbar>
+<ion-header *ngIf="areWeReady">
+  <ion-toolbar color="primary">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>Mostrar agentes</ion-title>
+    <ion-title *ngIf="!weHaveData">Mostrar agentes</ion-title>
+    <ion-title *ngIf="weHaveData">Agentes encontrados: {{numeroAgentes}}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 
 
-<ion-content padding>
+<ion-content padding *ngIf="areWeReady">
 
-  <ion-card *ngIf="data!=null">
-    <ion-card-header>
-      <ion-card-subtitle>{{data['host']}}</ion-card-subtitle>
-      <ion-card-title>{{data['community']}}</ion-card-title>
-    </ion-card-header>
+  <img src="../../assets/img/404.svg" alt="" *ngIf="!weHaveData">
+  <ion-text color="primary" *ngIf="!weHaveData" align="center">
+    <h3 >Aun no hay agentes dados de alta en el sistema</h3>
+  </ion-text>
+  <div *ngIf="weHaveData">
 
+    <ion-card  *ngFor="let data of agentes">
+    <img src="../../assets/img/windows.svg" *ngIf="data['_os']=='1'"/>
+    <img src="../../assets/img/linux.svg" *ngIf="data['_os']=='2' "/>
+    <img src="../../assets/img/mac.svg" *ngIf="data['_os']=='3'"/>
+    <img src="../../assets/img/desconocido.svg" *ngIf="data['_os']=='4'"/>
     <ion-card-content>
-    Puerto: {{data['port']}}, version: {{data['version']}}
+      <ion-card-title>
+        {{data['_node']}}
+      </ion-card-title>
+      <ion-card-subtitle>{{data['_hostname']}}</ion-card-subtitle>
+      <br>
+      <ion-text color="danger" *ngIf="!data['_status']">
+        <h2 >   <ion-icon name="close-circle"></ion-icon> Desconectado</h2>
+      </ion-text>
+      <ion-text color="success" *ngIf="data['_status']">
+
+        <h2 > <ion-icon name="checkmark-circle"></ion-icon>Conectado</h2>
+      </ion-text>
+      <p>
+        {{data['_hostName']}}
+      </p>
+      <p>
+        Este dispostivo tiene {{data['_interfaces'].length}} interfaces de red
+      </p>
     </ion-card-content>
+    <ion-row no-padding>
+        <ion-col>
+          <ion-button ion-button fill="clear" size="small" color="danger" icon-start>
+            <ion-icon name='trash'></ion-icon>
+              Eliminar
+          </ion-button>
+        </ion-col>
+        <ion-col text-center>
+          <ion-button ion-button fill="clear" size="small" color="primary" icon-start>
+            <ion-icon name='analytics'></ion-icon>
+              Consultar
+          </ion-button>
+        </ion-col>
+      </ion-row>
+
   </ion-card>
+  </div>
+
+
+
+
 
 
 

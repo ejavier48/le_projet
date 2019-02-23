@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar color="primary">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
@@ -8,5 +8,42 @@
 </ion-header>
 
 <ion-content padding>
+
+    <ion-grid>
+      <ion-row>
+        <ion-col offset="3"><img src="../../assets/img/agente.svg" alt=""></ion-col>
+      </ion-row>
+    </ion-grid>
+
+
+    <ion-text color="primary"  >
+      <h3 align="center">Datos del nuevo agente</h3>
+    </ion-text>
+  <ion-item>
+    <ion-label position="floating">Direccion IP</ion-label>
+    <ion-input [(ngModel)]="ipAdd"></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">Comunidad</ion-label>
+    <ion-input [(ngModel)]="comunidad"></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">SNMP Version</ion-label>
+    <ion-input [(ngModel)]="version"></ion-input>
+  </ion-item>
+  <br>
+  <br>
+  <ion-button expand="full" (click)="agregarAgente()">
+  <ion-icon slot="start" name="add" expand="block"></ion-icon>
+    Agregar
+  </ion-button>
+  <div *ngIf="showAlert">
+    <br>
+    <ion-text color="danger">
+      <h4 >Error, alguno de los datos no ha sido proporcionado</h4>
+    </ion-text>
+    <p color="danger"></p>
+  </div>
+
 
 </ion-content>
