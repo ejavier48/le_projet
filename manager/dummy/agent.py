@@ -1,3 +1,5 @@
+from time import time
+
 class Agent():
 
 	def __init__(self, hostName, version, port, community):
@@ -6,6 +8,10 @@ class Agent():
 		self._port = port
 		self._community = community
 		self._status = None
+		self._time =  int(time())
+
+	def setTime(self, cTime):
+		self._time = cTime
 
 	def setHostName(self, hostName):
 		self._hostName = hostName
@@ -28,9 +34,6 @@ class Agent():
 		self._os = info[5]
 		self._date = info[7]
 		self._bits = info[8]
-
-	def getInfo(self):
-		return "{} {} {} {}".format(self._type, self._os, self._bits, self._date)
 
 	def setContact(self, contact):
 		self._contact = contact
@@ -60,6 +63,9 @@ class Agent():
 		hrs %= 24
 		self._upTimeR = upTime
 		self._upTimeF = '({}) {} day {}:{}:{}.{}'.format(upTime, days, hrs, mins, segs, ms)
+
+	def getTime(self):
+		return self._time
 		
 	def getHostName(self):
 		return self._hostName
@@ -81,6 +87,9 @@ class Agent():
 
 	def getUpTimeF(self):
 		return self._upTimeF
+
+	def getInfo(self):
+		return "{} {} {} {}".format(self._type, self._os, self._bits, self._date)
 
 	def getContact(self):
 		return self._contact

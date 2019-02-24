@@ -3,9 +3,12 @@ from flask_cors import CORS
 from dummy.manager import ManagerSNMP
 from dummy.agent import Agent
 
-manager = None
 
+manager = None
+img_path = './agents/{}_{}.png'
 app = flask.Flask(__name__)
+app.secret_key = '1335555577777789'
+
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.config['DEBUG'] = True
@@ -19,8 +22,7 @@ def addAgent():
 	try:
 		data = flask.request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
-		manager.addAgent(agent)
-		if (manager.getBasicData(data['host'])):
+		if (manager.addAgent(agent)):
 			return flask.redirect('/')
 		else:
 			return flask.redirect('/error/NoConnected')
@@ -36,13 +38,35 @@ def deleteAgent():
 	except:
 		return flask.redirect('/error/format')
 
+@app.route('/info', methods = ['POST'])
+def info():
+	print flask.request.is_json
+	if flask.request.is_json:
+		print True
+	data = flask.request.get_json()
+	ans = manager.getAgentDict(data['host'])
+	return flask.jsonify(ans)
+	#except:
+	#	return flask.redirect('/error/format')
+
+
+
+@app.route('/images/<host>/<path>')
+def images(host, path):
+	image = img_path.format(host, path)
+	print image
+	try:
+		resp = flask.make_response(open(image).read())
+		resp.content_type = 'image/png'
+		return resp
+	except:
+		return flask.redirect('/error/noImageFound')
 
 @app.route('/error/<typeE>', methods = ['GET', 'POST'])
 def error(typeE):
 	data = {}
 	data['error'] = typeE
 	return flask.jsonify(data)
-
 
 if __name__ == '__main__':
 	manager = ManagerSNMP()

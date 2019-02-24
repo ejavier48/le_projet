@@ -1,58 +1,20 @@
 # -*- coding: utf-8 -*-
 from agent import *
+
 from pysnmp.hlapi import *
 
-#from threading import Thread
+from glob import glob
 
-class Manager():
+from os import remove
 
-	def __init__(self):
-		self._numAgents = 0
-		self._agents = {}
+from time import sleep
 
-	def addAgent(self, agent):
-		self._numAgents += 1
-		self._agents[agent.getHostName()] = agent
+from threading import Thread
 
-	def delAgent(self, hostname):
-		try:
-			del self._agents[hostname]
-			self._numAgents -= 1
-			print 'delete'
-			return True
-		except:
-			return False
 
-	def showAgents(self):
-		i = 1
-		for host in self._agents:
-			agent = self._agents[host]
-			print 'Agent Nº: ' + str(i)
-			print 'Hostname: ' + str(agent.getHostName())
-			print 'SNMP version: ' +  str(agent.getVersion())
-			print 'Port: ' + str(agent.getPort())
-			print 'Community: ' + str(agent.getCommunity())
-			flag = agent.getStatus()
-			print 'Status: ' + 'Up' if flag else 'Down'
-			if flag:
-				print 'Information: ' + agent.getInfo()
-				print 'Localization: ' + str(agent.getLocalization())
-				print 'Node Name: ' + str(agent.getNode())
-				print 'Contact: ' + str(agent.getContact())
-				numInterFs = agent.getNumInterFs()
-				print 'Interfaces: ' + str(numInterFs)
-				interfaces =  agent.getInterfaces()
-				i = 1
-				for interface in interfaces:
-					print '\tInterface Nº ' + str(i)
-					print '\tName: ' + interface['name']
-					print '\tStatus: ' + interface['status']
-					i += 1
-				print 'UpTime: ' + agent.getUpTimeF()
+import rrdtool
 
-			i += 1
-
-class ManagerSNMP(Manager):
+class ManagerSNMP():
 	_querys = {
 		'MIB'		: '1.3.6.1.2.1',
 		'Info'		: '.1.1.0',
@@ -67,13 +29,36 @@ class ManagerSNMP(Manager):
 		'PhyAddInterFs'	: '.2.2.1.6',
 		'StatusInterFs'	: '.2.2.1.8',
 		'InOctInterFs'	: '.2.2.1.10',
-		'OutOctInterFs'	: '.2.2.1.16'
+		'OutOctInterFs'	: '.2.2.1.16',
+		'InIP'			: '.4.3.0',
+		'OutIP'			: '.4.10.0',
+		'InICMP' 		: '.5.1.0',
+		'OutICMP'		: '.5.14.0',
+		'InTCP'			: '.6.10.0',
+		'OutTCP'		: '.6.11.0',
+		'InUDP'			: '.7.1.0',
+		'OutUDP'		: '.7.4.0',
 	}
+
+	_fname = {
+		#'infs' : './agents/{}_interface.{}',
+		'ip' : './agents/{}_ip.{}',
+		'icmp' : './agents/{}_icmp.{}',
+		'tcp' : './agents/{}_tcp.{}',
+		'udp' : './agents/{}_udp.{}',
+	}
+
+	#_images = 'images/{}'
 	
 	def __init__(self):
-		Manager.__init__(self)
+		self._agents = {}
+		self._numAgents = 0
 
-	def getBasicData(self, hostname):
+		self._thread = Thread(target = self._updateRRD, args = ())
+		self._thread.daemon = True
+		self._thread.start()
+
+	def _getBasicData(self, hostname):
 		try:
 			eIndi, eStatus, eIndex, vBinds = next(
 				getCmd(SnmpEngine(),
@@ -87,11 +72,10 @@ class ManagerSNMP(Manager):
 					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NumInterFs'])))
 			)
 			if eIndi:
-				self._agents[hostname].setStatus(False)
-				print eIndi
+				#print eIndi
 				return False
 			elif eStatus:
-				print eIndex, eStatus
+				#print eIndex, eStatus
 				return False
 			else:
 				i = 0
@@ -110,114 +94,174 @@ class ManagerSNMP(Manager):
 					else:
 						print 'Error'
 					i += 1
+				self._createRRD(hostname)
+				self._getAgentInterFs(hostname)
+				self._agents[hostname].setStatus(True)
 				return True
 		except:
 			return False
 
 	def _getAgentInterFs(self, hostname):
-		flag = True
-		try:
-			walk = nextCmd(SnmpEngine(),
-				CommunityData(self._agents[hostname].getCommunity()),
-				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-				ContextData(), 
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
-				)
-			n = self._agents[hostname].getNumInterFs()
-			interfaces = []
-			for i in range(n):
-				eIndi, eStatus, eIndex, vBinds = next(walk)
-				if eIndi:
-					print eIndi
-					flag = False
-				elif eStatus:
-					print eIndex, eStatus
-					flag = False
-				else:
-					data = 0
-					interface = {}
-					for varBind in vBinds:
-						a = [x.prettyPrint() for x in varBind]
-						if data == 0:
-							interface['name'] = a[1]
-							data += 1
-						elif data == 1:
-							interface['status'] = 'Up' if a[1] == '1' else 'Down'
-							data += 1
-						else:
-							print 'Error'
-					interfaces.append(interface)
-			self._agents[hostname].setInterfaces(interfaces)
-		except:
-			flag = False
-		return flag
-
-	def getAgentData(self, hostname):
-		self._agents[hostname].setStatus(False)
-		try:
-			eIndi, eStatus, eIndex, vBinds = next(
-				getCmd(SnmpEngine(),
-					CommunityData(self._agents[hostname].getCommunity()), 
-					UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-					ContextData(),
-					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])))
+		walk = nextCmd(SnmpEngine(),
+			CommunityData(self._agents[hostname].getCommunity()),
+			UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+			ContextData(), 
+			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
+			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
 			)
+		n = self._agents[hostname].getNumInterFs()
+		interfaces = []
+		for i in range(n):
+			eIndi, eStatus, eIndex, vBinds = next(walk)
 			if eIndi:
-				print eIndi
-				return
+				#print eIndi
+				self._agents[hostname].setStatus(False)
 			elif eStatus:
-				print eIndex, eStatus
-				return
+				#print eIndex, eStatus
+				self._agents[hostname].setStatus(False)
 			else:
-				i = 0
+				data = 0
+				interface = {}
 				for varBind in vBinds:
 					a = [x.prettyPrint() for x in varBind]
-					self._agents[hostname].setUpTime(int(a[1]))
-					#if i == 0:
-					#	self._agents[hostname].setUpTime(int(a[1]))
-					#	i += 1
-					#elif i == 1:
-					#	self._agents[hostname].setNumInterFs(int(a[1]))
-					#	i += 1
-					#else:
-					#	print "Error"
-				self._agents[hostname].setStatus(self._getAgentInterFs(hostname))
-		except:
-			print "Error in data"
+					if data == 0:
+						interface['name'] = a[1]
+						data += 1
+					elif data == 1:
+						interface['status'] = 'Up' if a[1] == '1' else 'Down'
+						data += 1
+					else:
+						print 'Error'
+				interfaces.append(interface)
+		self._agents[hostname].setInterfaces(interfaces)
 
-	def getAgentsData(self):
+	def _getAgentData(self, hostname):
+		eIndi, eStatus, eIndex, vBinds = next(
+			getCmd(SnmpEngine(),
+				CommunityData(self._agents[hostname].getCommunity()), 
+				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+				ContextData(),
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])))
+		)
+		if eIndi:
+			print eIndi
+			self._agents[hostname].setStatus(False)
+		elif eStatus:
+			print eIndex, eStatus
+			self._agents[hostname].setStatus(False)
+		else:
+			i = 0
+			for varBind in vBinds:
+				a = [x.prettyPrint() for x in varBind]
+				self._agents[hostname].setUpTime(int(a[1]))
+			self._getAgentInterFs(hostname)
+		return
+
+	def _createRRD(self, hostname):
+		for fname in self._fname:
+			name = self._fname[fname]
+			ret = rrdtool.create(name.format(hostname, 'rrd'), 
+								'--start', 'N', 
+								'--step', '30',
+								'DS:in:COUNTER:600:U:U',
+								'DS:out:COUNTER:600:U:U',
+								'RRA:MAX:0.5:5:50',
+								'RRA:MAX:0.5:1:75')
+			if ret:
+				print name.format(hostname, 'rrd'), rrdtool.error()
+
+	def _updateRRD(self):
+		while(1):
+			hosts = self._agents.keys()
+			for host in hosts:#get agent data
+				if not self._agents[host].getStatus(): #if agent is not active, go to next
+					continue
+				self._getAgentData(host) 
+				eIndi, eStatus, eIndex, vBinds = next(
+					getCmd(SnmpEngine(),
+						CommunityData(self._agents[host].getCommunity()), 
+						UdpTransportTarget((host, self._agents[host].getPort())),
+						ContextData(),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])))
+				)
+				if eIndi:
+					print eIndi
+				elif eStatus:
+					print eIndex, eStatus
+				else:
+					i = 0
+					keys = self._fname.keys()
+					inData = ''
+					outData = ''
+					for varBind in vBinds:
+						a = [x.prettyPrint() for x in varBind]
+						if not i&1:
+							inData = str(a[1])
+						else:
+							outData = str(a[1])
+							value = ':'.join(['N', inData, outData])
+							nRRD = self._fname[keys[i/2]].format(host, 'rrd')
+							try:
+								ret = rrdtool.update(nRRD, value) 
+							except:
+								break
+						i += 1
+
+	def _makegraphs(self, host):
+		for fname in self._fname:
+			name = self._fname[fname]
+			nImg = name.format(host, 'png')
+			nRRD = name.format(host, 'rrd')
+			print nImg
+			ret = rrdtool.graph(nImg,
+								'--start', str(self._agents[host].getTime()),
+								'--vertical-label=Bytes/s',
+								'DEF:in='+nRRD+':in:MAX',
+								'DEF:out='+nRRD+':out:MAX',
+								'LINE1:in#0F0F0F:In Traffic',
+								'LINE2:out#000FFF:Out Traffic')
+
+	def _getAgentsData(self):
+		devices = []
 		for host in self._agents:
-			self.getAgentData(host)
+			devices.append(self._agents[host].getDict())
+		return devices
+
+	def addAgent(self, agent):
+		host = agent.getHostName()
+		if host in self._agents:
+			return True
+		self._numAgents += 1
+		self._agents[host] = agent
+		return self._getBasicData(host)
+
+	def delAgent(self, hostname):
+		try:
+			self._agents[hostname].setStatus(False)
+			del self._agents[hostname]
+			sleep(.25)
+			self._numAgents -= 1
+			path = './agents/' + hostname + '*'
+			files = glob(path)
+			for file in files:
+				remove(file)
+			return True
+		except:
+			return False
 
 	def getDict(self):
-		self.getAgentsData()
 		data = {}
 		data['num_device'] = self._numAgents
-		data['devices'] = []
-		for host in self._agents:
-			agent = self._agents[host]
-			data['devices'].append(agent.getDict())
+		data['devices'] = self._getAgentsData()
 		return data
 
-def main():
-	hosts = []
-	manager = ManagerSNMP()
-	host = raw_input()
-	hosts.append(host)
-	version = raw_input()
-	port = int(raw_input())
-	community = raw_input()
-	manager.addAgent(Agent(host, version, port, community))
-	manager.getBasicData(host)
-	i = 0
-	while(i<10):
-		manager.getAgentsData()
-		manager.showAgents()
-		i += 1
-	return
-
-
-
-if __name__ == '__main__':
-	main()
+	def getAgentDict(self, hostname):
+		self._makegraphs(hostname)
+		return self._agents[hostname].getDict()
