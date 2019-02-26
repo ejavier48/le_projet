@@ -54,8 +54,6 @@ class ManagerSNMP():
 		'tcp',
 		'udp',
 	]
-
-	#_images = 'images/{}'
 	
 	def __init__(self):
 		self._agents = {}
@@ -81,10 +79,10 @@ class ManagerSNMP():
 					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NumInterFs'])))
 			)
 			if eIndi:
-				#print eIndi
+				print eIndi
 				return False
 			elif eStatus:
-				#print eIndex, eStatus
+				print eIndex, eStatus
 				return False
 			else:
 				i = 0
@@ -103,9 +101,13 @@ class ManagerSNMP():
 					else:
 						print 'Error'
 					i += 1
+
 				self._createRRD(hostname)
+
 				self._getAgentInterFs(hostname)
+
 				self._agents[hostname].setStatus(True)
+
 				return True
 		except:
 			return False
@@ -113,7 +115,8 @@ class ManagerSNMP():
 	def _getAgentInterFs(self, hostname):
 		
 		if not hostname in self._agents:
-			return 
+			print 'Not interface'
+			return
 		
 		walk = nextCmd(SnmpEngine(),
 			CommunityData(self._agents[hostname].getCommunity()),
@@ -122,7 +125,7 @@ class ManagerSNMP():
 			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
 			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
 			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InOctInterFs'])),
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutOctInterFs'])),
+			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutOctInterFs']))
 		)
 		
 		n = self._agents[hostname].getNumInterFs()
@@ -132,58 +135,55 @@ class ManagerSNMP():
 		s = self._fname[self._names[0]]
 
 		for i in range(n):
+
 			eIndi, eStatus, eIndex, vBinds = next(walk)
+
 			if eIndi:
-				#print eIndi
-				self._agents[hostname].setStatus(False)
+				print eIndi, i
+				continue
+
 			elif eStatus:
-				#print eIndex, eStatus
-				self._agents[hostname].setStatus(False)
+				print eIndex, eStatus, i
+				continue
+
 			else:
+
 				data = 0
 				interface = {}
 
 				for varBind in vBinds:
 					
 					a = [x.prettyPrint() for x in varBind]
+					#print a
 
 					if data == 0:
 						try:
-							interface['name'] = str(a[1]).decode('hex')
-							print interface['name']
-							interface['name'] = bytearray.fromhex(a[1]).decode()
-							print interface['name']
+							aux = [x for x in varBind]
+							interface['name'] = bytearray.fromhex(aux[1]).decode()
 						except:
 							interface['name'] = a[1]
-
-						data += 1
-
 					elif data == 1:
 						interface['status'] = 'Up' if a[1] == '1' else 'Down'
-						data += 1
 
 					elif data == 2:
-						inData = a[1]
-						data += 1
+						inData = int(a[1])
 
 					elif data == 3:
-
-						outData = a[1]
-						nRRD = s.format(hostname, i, 'rdd')
-						value = ':'.join(['N', str(inData), str(outData)])
-
-						print nRRD, value
 						
-						try:
-							ret = rrdtool.update(nRRD, value) 
-						except:
-							break
+						outData = int(a[1])
+						
+						nRRD = s.format(hostname, i, 'rrd')
+						value = ':'.join(['N', str(inData), str(outData)])
+						
+						ret = rrdtool.update(nRRD, value)
 
-						# update RRD
 					else:
-						print 'Error'
+						print 'Error', i
+
+					data += 1
+
 				interfaces.append(interface)
-		
+
 		self._agents[hostname].setInterfaces(interfaces)
 
 	def _getAgentData(self, hostname):
@@ -202,9 +202,11 @@ class ManagerSNMP():
 		if eIndi:
 			print eIndi
 			self._agents[hostname].setStatus(False)
+
 		elif eStatus:
 			print eIndex, eStatus
 			self._agents[hostname].setStatus(False)
+
 		else:
 			i = 0
 			
@@ -217,13 +219,14 @@ class ManagerSNMP():
 		return
 
 	def _createRRD(self, hostname):
+
 		for fname in self._fname:
 			s = self._fname[fname]
 			
 			if fname != self._names[0]:
 				
 				name = s.format(hostname, 'rrd')
-				
+
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
@@ -250,8 +253,13 @@ class ManagerSNMP():
 					if ret:
 						print name, rrdtool.error()
 
+		return 
+
 	def _updateRRD(self):
+		upImgs = 0
 		while(1):
+			upImgs+= 1
+
 			hosts = self._agents.keys()
 			for host in hosts:#get agent data
 				try:
@@ -260,6 +268,8 @@ class ManagerSNMP():
 						continue # if deleted go next
 
 					self._getAgentData(host) #update time up
+
+					#print 'status update', self._agents[host].getStatus()
 
 					if not self._agents[host].getStatus(): #if agent is not active, go to next
 						continue
@@ -286,13 +296,16 @@ class ManagerSNMP():
 						print eIndex, eStatus
 
 					else:
+
 						i = 0
 						inData = ''
 						outData = ''
+
 						for varBind in vBinds:
 							a = [x.prettyPrint() for x in varBind]
 							if not i&1:
 								inData = str(a[1])
+
 							else:
 
 								outData = str(a[1])
@@ -300,50 +313,66 @@ class ManagerSNMP():
 
 								fn = self._names[(i/2) + 1]
 								nRRD = self._fname[fn].format(host, 'rrd')
-								
-								print nRRD, value
 
+								#Prevent exception if agents and files were deleted
 								try:
 									ret = rrdtool.update(nRRD, value) 
+
 								except:
 									break
 							i += 1
+
+						if upImgs == 9:
+							self._makegraphs(host)
+
 				except: #Preventing exception if agent is deleted while working on it
 					continue
+
+			if upImgs == 9:
+				upImgs = 0
+
 			sleep(.5)
 
+
 	def _makegraphs(self, hostname):
+		if not hostname in self._agents: # preventing in case of agent deleted
+			return 
 
-		for fname in self._fname:
+		try:
+			for fname in self._fname:
 
-			if fname == self._names[0]:
+				if fname == self._names[0]:
 
-				for i in range(self._agents[hostname].getNumInterFs()):
+					for i in range(self._agents[hostname].getNumInterFs()):
 
-					name = self._fname[fname]
-					nImg = name.format(hostname, i, 'png')
-					nRRD = name.format(hostname, i, 'rrd')
+						name = self._fname[fname]
+						nImg = name.format(hostname, i, 'png')
+						nRRD = name.format(hostname, i, 'rrd')
 
-					ret = rrdtool.graph(nImg,
-								'--start', str(self._agents[hostname].getTime()),
-								'--vertical-label=Bytes/s',
-								'DEF:in='+nRRD+':in:AVERAGE',
-								'DEF:out='+nRRD+':out:AVERAGE',
-								'LINE1:in#0F0F0F:In Traffic',
-								'LINE2:out#000FFF:Out Traffic')
-			else:
-
-				name = self._fname[fname]
-				nImg = name.format(hostname, 'png')
-				nRRD = name.format(hostname, 'rrd')
-
-				ret = rrdtool.graph(nImg,
+						ret = rrdtool.graph(nImg,
 									'--start', str(self._agents[hostname].getTime()),
 									'--vertical-label=Bytes/s',
 									'DEF:in='+nRRD+':in:AVERAGE',
 									'DEF:out='+nRRD+':out:AVERAGE',
 									'LINE1:in#0F0F0F:In Traffic',
 									'LINE2:out#000FFF:Out Traffic')
+				else:
+
+					name = self._fname[fname]
+					nImg = name.format(hostname, 'png')
+					nRRD = name.format(hostname, 'rrd')
+
+					ret = rrdtool.graph(nImg,
+										'--start', str(self._agents[hostname].getTime()),
+										'--vertical-label=Bytes/s',
+										'DEF:in='+nRRD+':in:AVERAGE',
+										'DEF:out='+nRRD+':out:AVERAGE',
+										'LINE1:in#0F0F0F:In Traffic',
+										'LINE2:out#000FFF:Out Traffic')
+
+		except: #preventing exception if agent deleted
+			return 
+
 
 	def _getAgentsData(self):
 		devices = []
@@ -357,19 +386,20 @@ class ManagerSNMP():
 			return True
 		self._numAgents += 1
 		self._agents[host] = agent
+		self._agents[host].setStatus(False)
 		return self._getBasicData(host)
 
 	def delAgent(self, hostname):
 		try:
 			self._agents[hostname].setStatus(False)
 			del self._agents[hostname]
-			sleep(.25)
 			self._numAgents -= 1
 			path = './agents/' + hostname + '*'
 			files = glob(path)
 			for file in files:
 				remove(file)
 			return True
+
 		except:
 			return False
 
@@ -380,7 +410,8 @@ class ManagerSNMP():
 		return data
 
 	def getAgentDict(self, hostname):
+
 		if not hostname in self._agents:
 			return {}
-		self._makegraphs(hostname)
+
 		return self._agents[hostname].getDict()

@@ -40,9 +40,6 @@ def deleteAgent():
 
 @app.route('/info', methods = ['POST'])
 def info():
-	print flask.request.is_json
-	if flask.request.is_json:
-		print True
 	data = flask.request.get_json()
 	ans = manager.getAgentDict(data['host'])
 	return flask.jsonify(ans)
