@@ -27,6 +27,16 @@ export class VerAgentePage implements OnInit {
   urlVolver:string;
   puerto:string;
   indice:string;
+  imagenip : string = '';
+  imagenicmp : string = '';
+  imagentcp : string = '';
+  imagenudp : string = '';
+  imagenesip :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
+  imagenesicmp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
+  imagenestcp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
+  imagenesudp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
+  index : number = 0;
+  tiempo;
   constructor(private FlaskService: MensajeroFlaskService,
      private loadcont: LoadingController,
      private activatedRoute: ActivatedRoute,
@@ -55,7 +65,40 @@ export class VerAgentePage implements OnInit {
 
   ionViewWillEnter(){
       this.getData()
+      let intervalHandle = setInterval(()=> {
+        this.imagenip = this.imagenesip[this.index];
+        this.imagentcp = this.imagenestcp[this.index];
+        this.imagenudp = this.imagenesudp[this.index];
+        this.imagenicmp = this.imagenesicmp[this.index];
+        this.index++;
 
+        if(this.index == this.imagenesip.length)
+        {
+          this.index=0;
+
+        }
+
+        this.tiempo=this.getFormattedDate();
+
+      },2000);
+
+  }
+  getFormattedDate() {
+    var date = new Date();
+    var str = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + " " +  date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+
+    return str;
+  }
+
+  inicializaImagenes(){
+    this.imagenip="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/ip";
+    this.imagenesip[0]=this.imagenip;
+    this.imagenudp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/udp";
+    this.imagenesudp[0]=this.imagenudp;
+    this.imagentcp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/tcp";
+    this.imagenestcp[0]=this.imagentcp;
+    this.imagenicmp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/icmp";
+    this.imagenesicmp[0]=this.imagenicmp;
   }
 
   async getData(){
@@ -70,6 +113,12 @@ export class VerAgentePage implements OnInit {
         this.agente.push(res.devices[this.indice]);
           //console.log("data obtenida "+JSON.stringify(data));
         console.log(JSON.stringify(this.agente))
+        this.FlaskService.generateImages(this.ipAdd);
+
+        this.inicializaImagenes()
+
+
+
         loading.dismiss();
       },err => {
         console.log("error:"+JSON.stringify(err));

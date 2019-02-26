@@ -51,6 +51,43 @@
   </ion-row>
 
   <ion-text color="primary" text-center>
+    <h3>Protocolos</h3>
+  </ion-text>
+
+  <ion-text color="secondary" text-center>
+    <h5>ICMP</h5>
+  </ion-text>
+  <img [src]="imagenicmp" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+  <ion-text color="secondary" text-center>
+    <h5>IP</h5>
+  </ion-text>
+  <img [src]="imagenip" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+  <ion-text color="secondary" text-center>
+    <h5>TCP</h5>
+  </ion-text>
+  <img [src]="imagentcp" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+  <ion-text color="secondary" text-center>
+    <h5>UDP</h5>
+  </ion-text>
+  <img [src]="imagenudp" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+
+  <ion-text color="primary" text-center>
     <h3>Interfaces</h3>
   </ion-text>
 
@@ -60,6 +97,10 @@
       <ion-icon name="eye"></ion-icon>
     </ion-item>
   </ion-list>
+
+
+
+
 
 </ion-card>
 
