@@ -102,6 +102,8 @@ class ManagerSNMP():
 			return False
 
 	def _getAgentInterFs(self, hostname):
+		if not hostname in self._agents:
+			return 
 		walk = nextCmd(SnmpEngine(),
 			CommunityData(self._agents[hostname].getCommunity()),
 			UdpTransportTarget((hostname, self._agents[hostname].getPort())),
@@ -136,6 +138,8 @@ class ManagerSNMP():
 		self._agents[hostname].setInterfaces(interfaces)
 
 	def _getAgentData(self, hostname):
+		if not hostname in self._agents:
+			return
 		eIndi, eStatus, eIndex, vBinds = next(
 			getCmd(SnmpEngine(),
 				CommunityData(self._agents[hostname].getCommunity()), 
@@ -162,7 +166,7 @@ class ManagerSNMP():
 			name = self._fname[fname]
 			ret = rrdtool.create(name.format(hostname, 'rrd'), 
 								'--start', 'N', 
-								'--step', '30',
+								'--step', '60',
 								'DS:in:COUNTER:600:U:U',
 								'DS:out:COUNTER:600:U:U',
 								'RRA:MAX:0.5:5:50',
@@ -174,45 +178,56 @@ class ManagerSNMP():
 		while(1):
 			hosts = self._agents.keys()
 			for host in hosts:#get agent data
-				if not self._agents[host].getStatus(): #if agent is not active, go to next
+				try:
+
+					if not host in self._agents: # check if agent was deleted
+						continue # if deleted go next
+
+					self._getAgentData(host) #update time up
+
+					if not self._agents[host].getStatus(): #if agent is not active, go to next
+						continue
+
+					eIndi, eStatus, eIndex, vBinds = next(
+						getCmd(SnmpEngine(),
+							CommunityData(self._agents[host].getCommunity()), 
+							UdpTransportTarget((host, self._agents[host].getPort())),
+							ContextData(),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])))
+					)
+
+					if eIndi:
+						print eIndi
+					elif eStatus:
+						print eIndex, eStatus
+					else:
+						i = 0
+						keys = self._fname.keys()
+						inData = ''
+						outData = ''
+						for varBind in vBinds:
+							a = [x.prettyPrint() for x in varBind]
+							if not i&1:
+								inData = str(a[1])
+							else:
+								outData = str(a[1])
+								value = ':'.join(['N', inData, outData])
+								nRRD = self._fname[keys[i/2]].format(host, 'rrd')
+								try:
+									ret = rrdtool.update(nRRD, value) 
+								except:
+									break
+							i += 1
+				except: #Preventing exception if agent is deleted while working on it
 					continue
-				self._getAgentData(host) 
-				eIndi, eStatus, eIndex, vBinds = next(
-					getCmd(SnmpEngine(),
-						CommunityData(self._agents[host].getCommunity()), 
-						UdpTransportTarget((host, self._agents[host].getPort())),
-						ContextData(),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
-						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])))
-				)
-				if eIndi:
-					print eIndi
-				elif eStatus:
-					print eIndex, eStatus
-				else:
-					i = 0
-					keys = self._fname.keys()
-					inData = ''
-					outData = ''
-					for varBind in vBinds:
-						a = [x.prettyPrint() for x in varBind]
-						if not i&1:
-							inData = str(a[1])
-						else:
-							outData = str(a[1])
-							value = ':'.join(['N', inData, outData])
-							nRRD = self._fname[keys[i/2]].format(host, 'rrd')
-							try:
-								ret = rrdtool.update(nRRD, value) 
-							except:
-								break
-						i += 1
+			sleep(1)
 
 	def _makegraphs(self, host):
 		for fname in self._fname:
