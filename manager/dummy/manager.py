@@ -149,9 +149,13 @@ class ManagerSNMP():
 
 					if data == 0:
 						try:
-							interface['name'] = a[1].decode('hex')
+							interface['name'] = str(a[1]).decode('hex')
+							print interface['name']
+							interface['name'] = bytearray.fromhex(a[1]).decode()
+							print interface['name']
 						except:
 							interface['name'] = a[1]
+
 						data += 1
 
 					elif data == 1:
@@ -163,14 +167,18 @@ class ManagerSNMP():
 						data += 1
 
 					elif data == 3:
+
 						outData = a[1]
 						nRRD = s.format(hostname, i, 'rdd')
 						value = ':'.join(['N', str(inData), str(outData)])
+
 						print nRRD, value
+						
 						try:
 							ret = rrdtool.update(nRRD, value) 
 						except:
 							break
+
 						# update RRD
 					else:
 						print 'Error'
@@ -218,11 +226,11 @@ class ManagerSNMP():
 				
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
-								'--step', '60',
+								'--step', '10',
 								'DS:in:COUNTER:600:U:U',
 								'DS:out:COUNTER:600:U:U',
-								'RRA:MAX:0.5:5:50',
-								'RRA:MAX:0.5:1:75')
+								'RRA:AVERAGE:0.5:5:50',
+								'RRA:AVERAGE:0.5:1:75')
 				if ret:
 					print name, rrdtool.error()
 
@@ -233,11 +241,11 @@ class ManagerSNMP():
 
 					ret = rrdtool.create(name, 
 								'--start', 'N', 
-								'--step', '60',
+								'--step', '10',
 								'DS:in:COUNTER:600:U:U',
 								'DS:out:COUNTER:600:U:U',
-								'RRA:MAX:0.5:5:50',
-								'RRA:MAX:0.5:1:75')
+								'RRA:AVERAGE:0.5:5:50',
+								'RRA:AVERAGE:0.5:1:75')
 
 					if ret:
 						print name, rrdtool.error()
@@ -263,12 +271,12 @@ class ManagerSNMP():
 							ContextData(),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])))
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])))
 					)
 
 					if eIndi:
@@ -319,8 +327,8 @@ class ManagerSNMP():
 					ret = rrdtool.graph(nImg,
 								'--start', str(self._agents[hostname].getTime()),
 								'--vertical-label=Bytes/s',
-								'DEF:in='+nRRD+':in:MAX',
-								'DEF:out='+nRRD+':out:MAX',
+								'DEF:in='+nRRD+':in:AVERAGE',
+								'DEF:out='+nRRD+':out:AVERAGE',
 								'LINE1:in#0F0F0F:In Traffic',
 								'LINE2:out#000FFF:Out Traffic')
 			else:
@@ -332,8 +340,8 @@ class ManagerSNMP():
 				ret = rrdtool.graph(nImg,
 									'--start', str(self._agents[hostname].getTime()),
 									'--vertical-label=Bytes/s',
-									'DEF:in='+nRRD+':in:MAX',
-									'DEF:out='+nRRD+':out:MAX',
+									'DEF:in='+nRRD+':in:AVERAGE',
+									'DEF:out='+nRRD+':out:AVERAGE',
 									'LINE1:in#0F0F0F:In Traffic',
 									'LINE2:out#000FFF:Out Traffic')
 
