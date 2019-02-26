@@ -44,6 +44,10 @@ export class ConsultaPage implements OnInit {
     console.log(this.port);
 
     this.getData();
+
+  
+
+
   }
   ngOnInit() {
 

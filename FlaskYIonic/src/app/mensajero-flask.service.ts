@@ -33,6 +33,9 @@ getData(ipAdd:string, port:string):Observable<any>{
     return (response1);
 }
 
+
+
+
 async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
   const loading = await this.loadcont.create({
     message: 'Agregando'
@@ -66,6 +69,7 @@ async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
 
 
 }
+
 
 async deleteAgent(ipAdd:string, bandera:number) {
   console.log("entre a delete");

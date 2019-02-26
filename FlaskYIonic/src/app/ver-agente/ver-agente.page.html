@@ -1,12 +1,68 @@
 <ion-header>
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-back-button [defaultHref]="urlVolver"></ion-back-button>
+      <ion-back-button  (click)="volver()"></ion-back-button>
     </ion-buttons>
-    <ion-title>Agente</ion-title>
+    <ion-title>Descripcion general</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content padding>
+
+<!-- card de Descripcion-->
+<ion-card *ngFor="let agent of agente">
+
+  <ion-item>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="3">
+          <br><br>
+            <img src="../../assets/img/windows.svg">
+        </ion-col>
+        <ion-col size="1"></ion-col>
+        <ion-col size="8">
+          <h3>{{agent['_node']}}</h3>
+          <p>{{agent['_hostName']}}</p>
+          <ion-note>
+            Version del SO: {{agent['_os']}}
+          </ion-note>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </ion-item>
+
+  <ion-card-content>
+    <p>Ubicacion geografica: {{agent['_localization']}}</p>
+    <p>Datos de contacto: {{agent['_contact']}}</p>
+  </ion-card-content>
+
+  <ion-row>
+    <ion-col text-center>
+      <ion-note>
+        {{agent['_numInterFs']}} Interfaces
+      </ion-note>
+    </ion-col>
+    <ion-col text-center>
+      <ion-note>
+        Activo desde hace {{agent['_upTimeF']}}
+      </ion-note>
+    </ion-col>
+
+  </ion-row>
+
+  <ion-text color="primary" text-center>
+    <h3>Interfaces</h3>
+  </ion-text>
+
+  <ion-list *ngFor="let interface of agent['_interfaces'];  let i=index ">
+    <ion-item (click)="abrirModal(i)" lines="full">
+      <ion-label>{{interface['name']}}</ion-label>
+      <ion-icon name="eye"></ion-icon>
+    </ion-item>
+  </ion-list>
+
+</ion-card>
+
+
 
 </ion-content>

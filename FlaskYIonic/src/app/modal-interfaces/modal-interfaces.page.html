@@ -1,0 +1,21 @@
+<ion-header>
+  <ion-toolbar color="primary">
+
+    <ion-title>Interfaz {{interface}}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <ion-text color="primary" text-center>
+    <h3>Grafica del tráfico detectado:</h3>
+  </ion-text>
+
+  <img [src]="imagen" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+  <ion-button color="primary" expand="full" (click)="cerrarModal()"> Volver </ion-button>
+
+
+</ion-content>

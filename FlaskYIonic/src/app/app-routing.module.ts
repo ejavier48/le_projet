@@ -6,7 +6,8 @@ const routes: Routes = [
   { path: 'home', loadChildren: './home/home.module#HomePageModule' },
   //{ path: 'consulta/:ipAdd/:port', loadChildren: './consulta/consulta.module#ConsultaPageModule' },
   { path: 'menu/:ipAdd/:port', loadChildren: './menu/menu.module#MenuPageModule' },
-  { path: 'ver-agente/:indice', loadChildren: './ver-agente/ver-agente.module#VerAgentePageModule' }
+  { path: 'ver-agente/:indice', loadChildren: './ver-agente/ver-agente.module#VerAgentePageModule' },
+  //{ path: 'modal-interfaces', loadChildren: './modal-interfaces/modal-interfaces.module#ModalInterfacesPageModule' }
 
 ];
 
