@@ -41,18 +41,27 @@ class ManagerSNMP():
 	}
 
 	_fname = {
-		#'infs' : './agents/{}_interface.{}',
+		'infs' : './agents/{}_interface{}.{}',
 		'ip' : './agents/{}_ip.{}',
 		'icmp' : './agents/{}_icmp.{}',
 		'tcp' : './agents/{}_tcp.{}',
 		'udp' : './agents/{}_udp.{}',
 	}
+	_names = [
+		'infs',
+		'ip',
+		'icmp',
+		'tcp',
+		'udp',
+	]
 
 	#_images = 'images/{}'
 	
 	def __init__(self):
 		self._agents = {}
 		self._numAgents = 0
+
+		print self._fname.keys()
 
 		self._thread = Thread(target = self._updateRRD, args = ())
 		self._thread.daemon = True
@@ -102,17 +111,26 @@ class ManagerSNMP():
 			return False
 
 	def _getAgentInterFs(self, hostname):
+		
 		if not hostname in self._agents:
 			return 
+		
 		walk = nextCmd(SnmpEngine(),
 			CommunityData(self._agents[hostname].getCommunity()),
 			UdpTransportTarget((hostname, self._agents[hostname].getPort())),
 			ContextData(), 
 			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
 			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
-			)
+			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InOctInterFs'])),
+			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutOctInterFs'])),
+		)
+		
 		n = self._agents[hostname].getNumInterFs()
+
 		interfaces = []
+		
+		s = self._fname[self._names[0]]
+
 		for i in range(n):
 			eIndi, eStatus, eIndex, vBinds = next(walk)
 			if eIndi:
@@ -124,22 +142,55 @@ class ManagerSNMP():
 			else:
 				data = 0
 				interface = {}
+
 				for varBind in vBinds:
+					
 					a = [x.prettyPrint() for x in varBind]
+
 					if data == 0:
-						interface['name'] = a[1]
+						try:
+							interface['name'] = str(a[1]).decode('hex')
+							print interface['name']
+							interface['name'] = bytearray.fromhex(a[1]).decode()
+							print interface['name']
+						except:
+							interface['name'] = a[1]
+
 						data += 1
+
 					elif data == 1:
 						interface['status'] = 'Up' if a[1] == '1' else 'Down'
 						data += 1
+
+					elif data == 2:
+						inData = a[1]
+						data += 1
+
+					elif data == 3:
+
+						outData = a[1]
+						nRRD = s.format(hostname, i, 'rdd')
+						value = ':'.join(['N', str(inData), str(outData)])
+
+						print nRRD, value
+						
+						try:
+							ret = rrdtool.update(nRRD, value) 
+						except:
+							break
+
+						# update RRD
 					else:
 						print 'Error'
 				interfaces.append(interface)
+		
 		self._agents[hostname].setInterfaces(interfaces)
 
 	def _getAgentData(self, hostname):
+
 		if not hostname in self._agents:
 			return
+
 		eIndi, eStatus, eIndex, vBinds = next(
 			getCmd(SnmpEngine(),
 				CommunityData(self._agents[hostname].getCommunity()), 
@@ -147,6 +198,7 @@ class ManagerSNMP():
 				ContextData(),
 				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])))
 		)
+		
 		if eIndi:
 			print eIndi
 			self._agents[hostname].setStatus(False)
@@ -155,24 +207,48 @@ class ManagerSNMP():
 			self._agents[hostname].setStatus(False)
 		else:
 			i = 0
+			
 			for varBind in vBinds:
 				a = [x.prettyPrint() for x in varBind]
 				self._agents[hostname].setUpTime(int(a[1]))
+			
 			self._getAgentInterFs(hostname)
+		
 		return
 
 	def _createRRD(self, hostname):
 		for fname in self._fname:
-			name = self._fname[fname]
-			ret = rrdtool.create(name.format(hostname, 'rrd'), 
+			s = self._fname[fname]
+			
+			if fname != self._names[0]:
+				
+				name = s.format(hostname, 'rrd')
+				
+				ret = rrdtool.create(name, 
 								'--start', 'N', 
-								'--step', '60',
+								'--step', '10',
 								'DS:in:COUNTER:600:U:U',
 								'DS:out:COUNTER:600:U:U',
-								'RRA:MAX:0.5:5:50',
-								'RRA:MAX:0.5:1:75')
-			if ret:
-				print name.format(hostname, 'rrd'), rrdtool.error()
+								'RRA:AVERAGE:0.5:5:50',
+								'RRA:AVERAGE:0.5:1:75')
+				if ret:
+					print name, rrdtool.error()
+
+			else:
+				for i in range(self._agents[hostname].getNumInterFs()):
+
+					name = s.format(hostname, i, 'rrd')
+
+					ret = rrdtool.create(name, 
+								'--start', 'N', 
+								'--step', '10',
+								'DS:in:COUNTER:600:U:U',
+								'DS:out:COUNTER:600:U:U',
+								'RRA:AVERAGE:0.5:5:50',
+								'RRA:AVERAGE:0.5:1:75')
+
+					if ret:
+						print name, rrdtool.error()
 
 	def _updateRRD(self):
 		while(1):
@@ -195,21 +271,22 @@ class ManagerSNMP():
 							ContextData(),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
 							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])))
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
+							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])))
 					)
 
 					if eIndi:
 						print eIndi
+
 					elif eStatus:
 						print eIndex, eStatus
+
 					else:
 						i = 0
-						keys = self._fname.keys()
 						inData = ''
 						outData = ''
 						for varBind in vBinds:
@@ -217,9 +294,15 @@ class ManagerSNMP():
 							if not i&1:
 								inData = str(a[1])
 							else:
+
 								outData = str(a[1])
 								value = ':'.join(['N', inData, outData])
-								nRRD = self._fname[keys[i/2]].format(host, 'rrd')
+
+								fn = self._names[(i/2) + 1]
+								nRRD = self._fname[fn].format(host, 'rrd')
+								
+								print nRRD, value
+
 								try:
 									ret = rrdtool.update(nRRD, value) 
 								except:
@@ -227,21 +310,40 @@ class ManagerSNMP():
 							i += 1
 				except: #Preventing exception if agent is deleted while working on it
 					continue
-			sleep(1)
+			sleep(.5)
 
-	def _makegraphs(self, host):
+	def _makegraphs(self, hostname):
+
 		for fname in self._fname:
-			name = self._fname[fname]
-			nImg = name.format(host, 'png')
-			nRRD = name.format(host, 'rrd')
-			print nImg
-			ret = rrdtool.graph(nImg,
-								'--start', str(self._agents[host].getTime()),
+
+			if fname == self._names[0]:
+
+				for i in range(self._agents[hostname].getNumInterFs()):
+
+					name = self._fname[fname]
+					nImg = name.format(hostname, i, 'png')
+					nRRD = name.format(hostname, i, 'rrd')
+
+					ret = rrdtool.graph(nImg,
+								'--start', str(self._agents[hostname].getTime()),
 								'--vertical-label=Bytes/s',
-								'DEF:in='+nRRD+':in:MAX',
-								'DEF:out='+nRRD+':out:MAX',
+								'DEF:in='+nRRD+':in:AVERAGE',
+								'DEF:out='+nRRD+':out:AVERAGE',
 								'LINE1:in#0F0F0F:In Traffic',
 								'LINE2:out#000FFF:Out Traffic')
+			else:
+
+				name = self._fname[fname]
+				nImg = name.format(hostname, 'png')
+				nRRD = name.format(hostname, 'rrd')
+
+				ret = rrdtool.graph(nImg,
+									'--start', str(self._agents[hostname].getTime()),
+									'--vertical-label=Bytes/s',
+									'DEF:in='+nRRD+':in:AVERAGE',
+									'DEF:out='+nRRD+':out:AVERAGE',
+									'LINE1:in#0F0F0F:In Traffic',
+									'LINE2:out#000FFF:Out Traffic')
 
 	def _getAgentsData(self):
 		devices = []
@@ -278,5 +380,7 @@ class ManagerSNMP():
 		return data
 
 	def getAgentDict(self, hostname):
+		if not hostname in self._agents:
+			return {}
 		self._makegraphs(hostname)
 		return self._agents[hostname].getDict()
