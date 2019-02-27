@@ -37,9 +37,9 @@ export class ConsultaPage implements OnInit {
       this.numeroAgentes=0;
      }
 
-  ionViewDidEnter(){
-    console.log("hello");
-  }
+
+
+
 
   ionViewWillEnter(){
 
@@ -70,26 +70,32 @@ async refreshData(){
 
 
       console.log("devices: "+Object.keys(this.data.devices).length);
-      if(Object.keys(this.data.devices).length!=0){
+      try{
+        if(Object.keys(this.data.devices).length!=0){
 
-        this.weHaveData=true;
-        this.numeroAgentes=Object.keys(this.data.devices).length;
+          this.weHaveData=true;
+          this.numeroAgentes=Object.keys(this.data.devices).length;
 
-        //obtengo los agentes
-        for (let i = 0; i < this.numeroAgentes; i++) {
-            console.log(this.data.devices[i]);
-            //verifico si ya existe en el arreglo, si es asi, no lo meto
-            const estaEnELaArreglo =!!this.agentes.find(agente =>agente._node === this.data.devices[i]._node)
-            if(!estaEnELaArreglo){
-                this.agentes.push(this.data.devices[i]);
-            }
+          //obtengo los agentes
+          for (let i = 0; i < this.numeroAgentes; i++) {
+              console.log(this.data.devices[i]);
+              //verifico si ya existe en el arreglo, si es asi, no lo meto
+              const estaEnELaArreglo =!!this.agentes.find(agente =>agente._node === this.data.devices[i]._node)
+              if(!estaEnELaArreglo){
+                  this.agentes.push(this.data.devices[i]);
+              }
 
-            //checo el SO
-            this.clasificarSOAgente(i);
+              //checo el SO
+              this.clasificarSOAgente(i);
+          }
+
+
         }
-
-
       }
+      catch(e){
+          console.log("error "+e);
+      }
+
 
         this.areWeReady=true;
 
@@ -116,26 +122,32 @@ async refreshData(){
 
 
         console.log("devices: "+Object.keys(this.data.devices).length);
-        if(Object.keys(this.data.devices).length!=0){
+        try{
+          if(Object.keys(this.data.devices).length!=0){
 
-          this.weHaveData=true;
-          this.numeroAgentes=Object.keys(this.data.devices).length;
+            this.weHaveData=true;
+            this.numeroAgentes=Object.keys(this.data.devices).length;
 
-          //obtengo los agentes
-          for (let i = 0; i < this.numeroAgentes; i++) {
-              console.log(this.data.devices[i]);
-              //verifico si ya existe en el arreglo, si es asi, no lo meto
-              const estaEnELaArreglo =!!this.agentes.find(agente =>agente._node === this.data.devices[i]._node)
-              if(!estaEnELaArreglo){
-                  this.agentes.push(this.data.devices[i]);
-              }
+            //obtengo los agentes
+            for (let i = 0; i < this.numeroAgentes; i++) {
+                console.log(this.data.devices[i]);
+                //verifico si ya existe en el arreglo, si es asi, no lo meto
+                const estaEnELaArreglo =!!this.agentes.find(agente =>agente._node === this.data.devices[i]._node)
+                if(!estaEnELaArreglo){
+                    this.agentes.push(this.data.devices[i]);
+                }
 
-              //checo el SO
-              this.clasificarSOAgente(i);
+                //checo el SO
+                this.clasificarSOAgente(i);
+            }
+
+
           }
-
-
         }
+        catch(e){
+          console.log("error "+e);
+        }
+
 
           this.areWeReady=true;
           loading.dismiss();
