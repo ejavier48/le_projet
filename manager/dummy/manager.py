@@ -215,6 +215,7 @@ class ManagerSNMP():
 				self._agents[hostname].setUpTime(int(a[1]))
 			
 			self._getAgentInterFs(hostname)
+			self._agents[hostname].setStatus(True)
 		
 		return
 
