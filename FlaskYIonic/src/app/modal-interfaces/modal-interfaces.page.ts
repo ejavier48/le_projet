@@ -18,6 +18,7 @@ export class ModalInterfacesPage implements OnInit {
   name;
   interface;
   tiempo;
+  status;
   ipAdd:string;
   puerto:string;
   constructor(private modalc:ModalController, private FlaskService: MensajeroFlaskService) {
@@ -64,6 +65,7 @@ export class ModalInterfacesPage implements OnInit {
     this.imagen="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.name+"/interface"+this.value;
     this.imagenes[0]=this.imagen;
     this.imagenes[1]=this.imagen;
+    console.log(this.status);
 
   }
 

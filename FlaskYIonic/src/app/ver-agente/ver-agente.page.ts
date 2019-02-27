@@ -58,7 +58,7 @@ export class VerAgentePage implements OnInit {
   async abrirModal(index:number){
     const modal = await this.modalController.create({
        component: ModalInterfacesPage,
-       componentProps: { value: index, name:this.agente[0]._hostName, interface:this.agente[0]._interfaces[index].name }
+       componentProps: { value: index, name:this.agente[0]._hostName, interface:this.agente[0]._interfaces[index].name, status:this.agente[0]._interfaces[index].status  }
      });
      return await modal.present();
   }
