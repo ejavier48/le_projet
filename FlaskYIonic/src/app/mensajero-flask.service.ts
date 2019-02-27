@@ -19,8 +19,9 @@ export class MensajeroFlaskService {
   ipAdd:string;
   puerto:string;
   agenteConsultado:any;
+  pausarInteravalo1:boolean;
   constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router) {
-
+    this.pausarInteravalo1=false;
 
   }
 

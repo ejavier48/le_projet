@@ -25,6 +25,7 @@ export class ConsultaPage implements OnInit {
   areWeReady:boolean;
   numeroAgentes:number;
   agentes = [];
+  intervalo;
 
   constructor(private activatedRoute: ActivatedRoute,
     private FlaskService: MensajeroFlaskService,
@@ -36,6 +37,10 @@ export class ConsultaPage implements OnInit {
       this.numeroAgentes=0;
      }
 
+  ionViewDidEnter(){
+    console.log("hello");
+  }
+
   ionViewWillEnter(){
 
     this.ipAdd = this.activatedRoute.snapshot.paramMap.get('ipAdd');
@@ -45,13 +50,57 @@ export class ConsultaPage implements OnInit {
 
     this.getData();
 
-  
+    this.intervalo = setInterval(()=> {
+      if(!this.FlaskService.pausarInteravalo1)
+        this.refreshData();
+    },2000);
 
+    console.log("hello2");
 
   }
   ngOnInit() {
 
   }
+
+async refreshData(){
+  this.FlaskService.getData(this.ipAdd,this.port)
+    .subscribe(res => {
+      console.log(res);
+      this.data = res;
+
+
+      console.log("devices: "+Object.keys(this.data.devices).length);
+      if(Object.keys(this.data.devices).length!=0){
+
+        this.weHaveData=true;
+        this.numeroAgentes=Object.keys(this.data.devices).length;
+
+        //obtengo los agentes
+        for (let i = 0; i < this.numeroAgentes; i++) {
+            console.log(this.data.devices[i]);
+            //verifico si ya existe en el arreglo, si es asi, no lo meto
+            const estaEnELaArreglo =!!this.agentes.find(agente =>agente._node === this.data.devices[i]._node)
+            if(!estaEnELaArreglo){
+                this.agentes.push(this.data.devices[i]);
+            }
+
+            //checo el SO
+            this.clasificarSOAgente(i);
+        }
+
+
+      }
+
+        this.areWeReady=true;
+
+    }, err => {
+      console.log("error:"+JSON.stringify(err));
+      this.router.navigate(['/']);
+
+        this.presentAlert(JSON.stringify(err));
+
+    });
+}
 
   async getData() {
 
@@ -128,6 +177,7 @@ clasificarSOAgente(indice:number){
     console.log("voy a consultar a "+indice);
     this.FlaskService.agenteConsultado=this.agentes[indice];
     this.router.navigate(['/ver-agente',indice]);
+    this.FlaskService.pausarInteravalo1=true;
   }
 
 

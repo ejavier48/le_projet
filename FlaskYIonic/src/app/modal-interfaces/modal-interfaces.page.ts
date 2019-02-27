@@ -19,6 +19,7 @@ export class ModalInterfacesPage implements OnInit {
   interface;
   tiempo;
   status;
+  intervalo;
   ipAdd:string;
   puerto:string;
   constructor(private modalc:ModalController, private FlaskService: MensajeroFlaskService) {
@@ -27,7 +28,7 @@ export class ModalInterfacesPage implements OnInit {
 
     this.tiempo=this.getFormattedDate();
 
-    let intervalHandle = setInterval(()=> {
+    this.intervalo = setInterval(()=> {
       this.imagen = this.imagenes[this.index];
       this.agregaTimeStamp();
       this.index++;
@@ -70,7 +71,9 @@ export class ModalInterfacesPage implements OnInit {
   }
 
   cerrarModal(){
+      clearInterval(this.intervalo);
       this.modalc.dismiss();
+
   }
 
 }

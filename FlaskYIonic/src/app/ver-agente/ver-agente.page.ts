@@ -37,6 +37,7 @@ export class VerAgentePage implements OnInit {
   imagenesudp :string[] = ['', ''];
   index : number = 0;
   tiempo;
+  intervalo;
   constructor(private FlaskService: MensajeroFlaskService,
      private loadcont: LoadingController,
      private activatedRoute: ActivatedRoute,
@@ -51,6 +52,8 @@ export class VerAgentePage implements OnInit {
   }
 
   volver(){
+      clearInterval(this.intervalo);
+      this.FlaskService.pausarInteravalo1=false;
       this.router.navigate(['/menu',this.ipAdd, this.puerto,'menu','menu','consulta',this.ipAdd, this.puerto]);
 
   }
@@ -75,7 +78,7 @@ agregaTimeStamp(){
 
   ionViewWillEnter(){
       this.getData()
-      let intervalHandle = setInterval(()=> {
+      this.intervalo = setInterval(()=> {
         this.imagenip = this.imagenesip[this.index];
         this.imagentcp = this.imagenestcp[this.index];
         this.imagenudp = this.imagenesudp[this.index];

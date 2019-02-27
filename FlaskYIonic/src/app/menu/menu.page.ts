@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterEvent } from '@angular/router'
 
+
 //para recibir paramteros
 import { ActivatedRoute } from "@angular/router";
 @Component({
@@ -46,6 +47,10 @@ export class MenuPage implements OnInit {
   }
 
   ngOnInit() {
+  }
+
+  ionViewDidEnter(){
+
   }
 
 }
