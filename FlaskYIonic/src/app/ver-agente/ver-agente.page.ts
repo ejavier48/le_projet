@@ -31,10 +31,10 @@ export class VerAgentePage implements OnInit {
   imagenicmp : string = '';
   imagentcp : string = '';
   imagenudp : string = '';
-  imagenesip :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
-  imagenesicmp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
-  imagenestcp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
-  imagenesudp :string[] = ['', 'https://i.ytimg.com/vi/kV4vHpqrj6E/hqdefault.jpg'];
+  imagenesip :string[] = ['', ''];
+  imagenesicmp :string[] = ['', ''];
+  imagenestcp :string[] = ['', ''];
+  imagenesudp :string[] = ['', ''];
   index : number = 0;
   tiempo;
   constructor(private FlaskService: MensajeroFlaskService,
@@ -58,10 +58,20 @@ export class VerAgentePage implements OnInit {
   async abrirModal(index:number){
     const modal = await this.modalController.create({
        component: ModalInterfacesPage,
-       componentProps: { value: index, name:this.agente[0]._hostName, interface:this.agente[0]._interfaces[index].name }
+       componentProps: { value: index, name:this.agente[0]._hostName, interface:this.agente[0]._interfaces[index].name, status:this.agente[0]._interfaces[index].status  }
      });
      return await modal.present();
   }
+
+agregaTimeStamp(){
+  this.imagenip+="?"+  Math.random().toString(36).substr(2, 9);
+  this.imagenudp+="?"+  Math.random().toString(36).substr(2, 9);
+  this.imagentcp+="?"+ Math.random().toString(36).substr(2, 9);
+  this.imagenicmp+="?"+  Math.random().toString(36).substr(2, 9);
+
+  console.log(this.imagentcp);
+}
+
 
   ionViewWillEnter(){
       this.getData()
@@ -71,6 +81,7 @@ export class VerAgentePage implements OnInit {
         this.imagenudp = this.imagenesudp[this.index];
         this.imagenicmp = this.imagenesicmp[this.index];
         this.index++;
+        this.agregaTimeStamp()
 
         if(this.index == this.imagenesip.length)
         {
@@ -91,14 +102,18 @@ export class VerAgentePage implements OnInit {
   }
 
   inicializaImagenes(){
-    this.imagenip="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/ip";
+    this.imagenip="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/ip";
     this.imagenesip[0]=this.imagenip;
-    this.imagenudp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/udp";
+    this.imagenesip[1]=this.imagenip;
+    this.imagenudp="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/udp";
     this.imagenesudp[0]=this.imagenudp;
-    this.imagentcp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/tcp";
+    this.imagenesudp[1]=this.imagenudp;
+    this.imagentcp="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/tcp";
     this.imagenestcp[0]=this.imagentcp;
-    this.imagenicmp="http://192.168.0.25:8080/images/"+this.agente[0]._hostName+"/icmp";
+    this.imagenestcp[1]=this.imagentcp;
+    this.imagenicmp="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/icmp";
     this.imagenesicmp[0]=this.imagenicmp;
+    this.imagenesicmp[1]=this.imagenicmp;
   }
 
   async getData(){
@@ -113,7 +128,7 @@ export class VerAgentePage implements OnInit {
         this.agente.push(res.devices[this.indice]);
           //console.log("data obtenida "+JSON.stringify(data));
         console.log(JSON.stringify(this.agente))
-        this.FlaskService.generateImages(this.ipAdd);
+        this.FlaskService.generateImages(res.devices[this.indice]._hostName);
 
         this.inicializaImagenes()
 

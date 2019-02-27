@@ -11,6 +11,20 @@
   </ion-text>
 
   <img [src]="imagen" alt="">
+  <ion-grid>
+    <ion-row>
+      <ion-col>
+        <ion-text color="danger" *ngIf="status=='Down'" >
+          <h4 >   <ion-icon name="close-circle"></ion-icon> Desconectado</h4>
+        </ion-text>
+        <ion-text color="success" *ngIf="status=='Up'">
+          <h4 > <ion-icon name="checkmark-circle"></ion-icon>Conectado</h4>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+
   <ion-note>
     Ultima consulta al servidor: {{tiempo}}
   </ion-note>
