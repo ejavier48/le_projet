@@ -8,6 +8,12 @@ import { AlertController } from '@ionic/angular';
 import { LoadingController } from '@ionic/angular';
 //para poder moverme entre pantallas
 import { Router } from "@angular/router";
+//para guardar informacion de manera permanente
+import { Storage } from '@ionic/storage';
+//para utilizar storage en navegador
+import { Platform } from '@ionic/angular';
+//para enviar Toasts
+import { ToastController } from '@ionic/angular';
 
 
 
@@ -20,9 +26,23 @@ export class MensajeroFlaskService {
   puerto:string;
   agenteConsultado:any;
   pausarInteravalo1:boolean;
-  constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router) {
+  hayInfoAdmin:boolean;
+  infoAdmin={
+    nombre: "",
+    email:"",
+    tel:""
+  }
+
+  constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router, private storage: Storage, private platform: Platform, private toastc:ToastController) {
     this.pausarInteravalo1=false;
 
+    this.cargar_storage();
+    if(this.infoAdmin.nombre==""){
+      this.hayInfoAdmin=false;
+    }
+    else{
+      this.hayInfoAdmin=true;
+    }
   }
 
 getData(ipAdd:string, port:string):Observable<any>{
@@ -34,8 +54,46 @@ getData(ipAdd:string, port:string):Observable<any>{
     return (response1);
 }
 
+async  cargar_storage(){
+
+    if(this.platform.is('cordova')){
+      //app
+      console.log("cargo ajustes");
+      await this.storage.get("administrador").then((val) => {
+          console.log(JSON.parse(val))
+          this.infoAdmin=JSON.parse(val);
+          console.log(this.infoAdmin);
+      });
+    }
+    else{
+      //escritorio
+      if(localStorage.getItem("administrador")){
+        this.infoAdmin=JSON.parse(localStorage.getItem("administrador"));
+        console.log(this.infoAdmin);
+        console.log(JSON.parse(localStorage.getItem("administrador")))
+      }
+    }
+  }
 
 
+
+  guardar_storage(nombre: string, tel: string, email: string){
+    this.infoAdmin.nombre=nombre;
+    this.infoAdmin.email=email;
+    this.infoAdmin.tel=tel;
+
+    if(this.platform.is('cordova')){
+      //app
+       this.storage.set('administrador', JSON.stringify(this.infoAdmin));
+    }
+    else{
+      //escritorio
+       localStorage.setItem("administrador",JSON.stringify(this.infoAdmin));
+    }
+
+    this.presentAlert("Yeai!","Los datos del administrador han sido guardados con exito");
+    this.hayInfoAdmin=true;
+  }
 
 async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
   const loading = await this.loadcont.create({
@@ -98,6 +156,16 @@ async deleteAgent(ipAdd:string, bandera:number) {
   })
 }
 
+async presentToast(mensaje:string) {
+    const toast = await this.toastc.create({
+      message: mensaje,
+      duration: 7000,
+      color: "danger",
+      position: "bottom"
+    });
+    toast.present();
+  }
+
 async presentAlert(titulo:string,mensaje:string) {
    const alert = await this.alertC.create({
      header: titulo,
@@ -106,7 +174,9 @@ async presentAlert(titulo:string,mensaje:string) {
        text:'OK',
        handler: () => {
            console.log('Confirm Okay');
+
            this.router.navigate(['/menu',this.ipAdd, this.puerto,'menu','menu','consulta',this.ipAdd, this.puerto]);
+
          }
      }]
    });

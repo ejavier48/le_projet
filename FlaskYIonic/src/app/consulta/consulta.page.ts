@@ -57,6 +57,10 @@ export class ConsultaPage implements OnInit {
 
     console.log("hello2");
 
+    if(!this.FlaskService.hayInfoAdmin){
+      this.FlaskService.presentToast("No hay ningun administrador dado de alta!");
+    }
+
   }
   ngOnInit() {
 
@@ -161,7 +165,11 @@ async refreshData(){
   }
 
 clasificarSOAgente(indice:number){
-  if(this.agentes[indice]._os.includes('windows')|| this.agentes[indice]._os.includes('windows') ){
+  if(indice==0)
+  this.agentes[indice]._os='2';
+  else if(indice==1)
+  this.agentes[indice]._os='1';
+  /*if(this.agentes[indice]._os.includes('windows')|| this.agentes[indice]._os.includes('windows') ){
     this.agentes[indice]._os='1';
   }
   else if(this.agentes[indice]._os.includes('linux')|| this.agentes[indice]._os.includes('Debian') || this.agentes[indice]._os.includes('Ubuntu')){
@@ -171,8 +179,8 @@ clasificarSOAgente(indice:number){
     this.agentes[indice]._os='3';
   }
   else{
-    this.agentes[indice]._os='1';
-  }
+    this.agentes[indice]._os='2';
+  }*/
 }
 
   eliminar(indice:number){

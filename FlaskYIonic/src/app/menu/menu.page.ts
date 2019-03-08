@@ -25,6 +25,10 @@ export class MenuPage implements OnInit {
         url: 'menu/consulta'
       },
       {
+        title:'Administracion',
+        url:'administrador'
+      },
+      {
         title:'Cerrar conexion',
         url:''
       }

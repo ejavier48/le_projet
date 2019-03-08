@@ -22,15 +22,20 @@ import { MensajeroFlaskService } from './mensajero-flask.service';
 import { ModalInterfacesPage } from "./modal-interfaces/modal-interfaces.page"
 
 
+//Para guardar informacion de manera permanente
+import { IonicStorageModule } from '@ionic/storage';
+
+
 @NgModule({
   declarations: [AppComponent,ModalInterfacesPage],
   entryComponents: [ModalInterfacesPage],
-  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,HttpClientModule],
+  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,HttpClientModule, IonicStorageModule.forRoot()],
   providers: [
     StatusBar,
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },HttpClient,
     MensajeroFlaskService, ModalController
+
   ],
   bootstrap: [AppComponent]
 })

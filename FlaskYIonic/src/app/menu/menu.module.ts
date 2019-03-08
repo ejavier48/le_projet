@@ -14,6 +14,7 @@ const routes: Routes = [
     children:[
       { path: 'add-agent', loadChildren: '../add-agent/add-agent.module#AddAgentPageModule' },
       { path: 'menu/consulta/:ipAdd/:port', loadChildren: '../consulta/consulta.module#ConsultaPageModule' },
+      { path: 'administrador', loadChildren: './administrador/administrador.module#AdministradorPageModule' },
     ]
   },
   {
