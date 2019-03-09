@@ -19,14 +19,14 @@ def home():
 
 @app.route('/add', methods = ['POST'])
 def addAgent():
-	try:
+	if True:#try:
 		data = flask.request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
 		if (manager.addAgent(agent)):
 			return flask.redirect('/')
 		else:
 			return flask.redirect('/error/NoConnected')
-	except:
+	else:#except:
 		return flask.redirect('/error/format')
 
 @app.route('/delete', methods = ['POST'])
