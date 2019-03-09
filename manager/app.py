@@ -19,14 +19,16 @@ def home():
 
 @app.route('/add', methods = ['POST'])
 def addAgent():
-	if True:#try:
+	try:
 		data = flask.request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
+
 		if (manager.addAgent(agent)):
 			return flask.redirect('/')
 		else:
 			return flask.redirect('/error/NoConnected')
-	else:#except:
+
+	except:
 		return flask.redirect('/error/format')
 
 @app.route('/delete', methods = ['POST'])
@@ -35,6 +37,7 @@ def deleteAgent():
 		data = flask.request.get_json()
 		manager.delAgent(data['host'])
 		return flask.jsonify({'status':True})
+
 	except:
 		return flask.redirect('/error/format')
 
@@ -43,19 +46,20 @@ def info():
 	data = flask.request.get_json()
 	ans = manager.getAgentDict(data['host'])
 	return flask.jsonify(ans)
-	#except:
-	#	return flask.redirect('/error/format')
 
 
+@app.route('/notify', methods = ['POST',])
+def notify():
+	return flask.jsonify(manager.getNotifications())
 
 @app.route('/images/<host>/<path>')
 def images(host, path):
 	image = img_path.format(host, path)
-	print image
 	try:
 		resp = flask.make_response(open(image).read())
 		resp.content_type = 'image/png'
 		return resp
+
 	except:
 		return flask.redirect('/error/noImageFound')
 

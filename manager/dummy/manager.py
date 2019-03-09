@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from agent import *
 
+from notification import Notification
+
 from pysnmp.hlapi import *
 
 from glob import glob
@@ -52,7 +54,6 @@ class ManagerSNMP():
 		'ram'	: './agents/{}_ram.{}',
 		'cpu'	: './agents/{}_cpu{}.{}',
 		'hdd'	: './agents/{}_hdd.{}',
-
 	}
 
 	_names = [
@@ -65,10 +66,20 @@ class ManagerSNMP():
 		'cpu',
 		'hdd',
 	]
+
+	_limits = {
+		'RAM' : .50,
+		'CPU' : 50,
+		'HDD' : .60,
+		'Time': 300,
+	}
+
+	_notifications = {}
 	
 	def __init__(self):
 		self._agents = {}
 		self._new = []
+		self._newNotification = []
 		self._numAgents = 0
 		self._thread = Thread(target = self._updateRRD, args = ())
 		self._thread.daemon = True
@@ -118,22 +129,16 @@ class ManagerSNMP():
 					i += 1
 
 				self._getNumCPUs(hostname)
-				print 'num cpus'
 
 				self._createRRD(hostname)
-				print 'create'
 
 				self._getCPUsUse(hostname)
-				print 'cpu use'
 
 				self._getAgentInterFs(hostname)
-				print 'interFs'
 
 				self._agents[hostname].setStatus(True)
-				print 'status'
 
 				self._new.remove(hostname)
-				print 'finish _getBasicData'
 
 				return True
 		else:#except:
@@ -212,8 +217,26 @@ class ManagerSNMP():
 						a = [x.prettyPrint() for x in varBind]
 						cpusUse[i] = int(a[1])
 
+						if self._limits['CPU'] < cpusUse[i]:
+
+							noti = Notification(hostname, 'CPU ' + str(i+1), self._limits['CPU'], cpusUse[i])
+							
+							if not i in self._notifications[hostname]['CPU']:
+								self._notifications[hostname]['CPU'][i] = []
+								self._notifications[hostname]['CPU'][i].append(noti)
+								self._newNotification.append(noti.getReport())
+
+							else:
+								last = self._notifications[hostname]['CPU'][i][-1]
+								diff = noti.getTimeReport() - last.getTimeReport()
+
+								if self._limits['Time'] < diff:
+									self._notifications[hostname]['CPU'][i].append(noti)
+									self._newNotification.append(noti.getReport())	
+
 						fn = self._names[6]
 						nRRD = self._fname[fn].format(hostname, i, 'rrd')
+
 						value = ':'.join(['N', a[1]])
 						
 						try:
@@ -325,15 +348,40 @@ class ManagerSNMP():
 			i = 0
 			for varBind in vBinds:
 				a = [x.prettyPrint() for x in varBind]
+
 				if i == 0:
 					self._agents[hostname].setUpTime(int(a[1]))
+
 				elif i == 1:
 					self._agents[hostname].setRAMUse(int(a[1]))
+
+					x = self._agents[hostname].getRAMSize() * self._limits['RAM']
+
 					fn = self._names[5]
 					nRRD = self._fname[fn].format(hostname, 'rrd')
 					value = ':'.join(['N', a[1]])
+
+					if x < self._agents[hostname].getRAMUse():
+						
+						noti = Notification(hostname, 'RAM', x, self._agents[hostname].getRAMUse())
+						flag = True
+
+						if 0 < len(self._notifications[hostname]['RAM']):
+
+							last = self._notifications[hostname]['RAM'][-1]
+							diff = noti.getTimeReport() - last.getTimeReport()
+
+							if  diff < self._limits['Time']:
+								flag = False
+
+						if flag:
+							self._notifications[hostname]['RAM'].append(noti)
+							self._newNotification.append(noti.getReport())
+
+
 					if True:#try:
 						ret = rrdtool.update(nRRD, value) 
+
 					else:#except:
 						print 'problem update ram _getAgentData'
 				else:
@@ -349,11 +397,8 @@ class ManagerSNMP():
 		for fname in self._names:
 
 			s = self._fname[fname]
-			print len(self._names)
-			
-			if fname == self._names[4]:
 
-				print fname
+			if fname == self._names[4]:
 
 				for i in range(self._agents[hostname].getNumInterFs()):
 
@@ -371,19 +416,17 @@ class ManagerSNMP():
 						print name, rrdtool.error()
 
 			elif fname == self._names[5]:
-				print fname
 				#create ram
 				name = s.format(hostname, 'rrd')
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:ram:GAUGE:600:U:U',
+								'DS:ram:COUNTER:600:U:U',
 								'RRA:AVERAGE:0.5:5:100')
 				if ret:
 					print name, rrdtool.error()	
 
 			elif fname == self._names[6]:
-				print fname
 				#create cpu
 				for i in range(self._agents[hostname].getNumCPUs()):
 
@@ -399,7 +442,6 @@ class ManagerSNMP():
 						print name, rrdtool.error()
 
 			elif fname == self._names[7]:
-				print fname
 				#hdd
 				name = s.format(hostname, 'rrd')
 				ret = rrdtool.create(name, 
@@ -411,7 +453,6 @@ class ManagerSNMP():
 					print name, rrdtool.error()	
 			
 			else:
-				print fname
 				name = s.format(hostname, 'rrd')
 
 				ret = rrdtool.create(name, 
@@ -632,6 +673,11 @@ class ManagerSNMP():
 			return True
 		self._numAgents += 1
 		self._new.append(hostname)
+		self._notifications[hostname] = {
+			'RAM': [],
+			'CPU': {},
+			'HDD': [],
+		}
 		self._agents[hostname] = agent
 		self._agents[hostname].setStatus(False)
 		return self._getBasicData(hostname)
@@ -640,6 +686,7 @@ class ManagerSNMP():
 		try:
 			self._agents[hostname].setStatus(False)
 			del self._agents[hostname]
+			del self._notifications[hostname]
 			self._numAgents -= 1
 			path = './agents/' + hostname + '*'
 			files = glob(path)
@@ -655,6 +702,12 @@ class ManagerSNMP():
 		data['num_device'] = self._numAgents
 		data['devices'] = self._getAgentsData()
 		return data
+
+	def getNotifications(self):
+		n = len(self._newNotification)
+		noti = self._newNotification[:n]
+		self._newNotification = self._newNotification[n:]
+		return noti
 
 	def getAgentDict(self, hostname):
 		if not hostname in self._agents:
