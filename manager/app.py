@@ -8,7 +8,7 @@ from dummy.agent import Agent
 manager = None
 img_path = './agents/{}_{}.png'
 app = flask.Flask(__name__)
-app.secret_key = '1335555577777789'
+app.secret_key = 'hgkyigkj,khbgkgiugkliuhgkuhloiyhliuhlkuhyliu'
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 

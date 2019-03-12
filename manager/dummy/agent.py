@@ -129,4 +129,5 @@ class Agent():
 		return self._cpusUse
 
 	def getDict(self):
+		self._numInterFs = len(self._interfaces)
 		return self.__dict__
