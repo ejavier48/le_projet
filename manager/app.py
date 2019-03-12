@@ -18,12 +18,12 @@ logging.getLogger('flask_cors').level = logging.DEBUG
 
 
 @app.route('/', methods = ['GET','POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def home():
 	return flask.jsonify(manager.getDict())
 
 @app.route('/add', methods = ['POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def addAgent():
 	print flask.request
 	if flask.request.is_json:
@@ -39,7 +39,7 @@ def addAgent():
 		return flask.redirect('/error/format')
 
 @app.route('/delete', methods = ['POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def deleteAgent():
 	try:
 		data = flask.request.get_json()
@@ -49,7 +49,7 @@ def deleteAgent():
 		return flask.redirect('/error/format')
 
 @app.route('/info', methods = ['POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def info():
 	data = flask.request.get_json()
 	ans = manager.getAgentDict(data['host'])
@@ -57,7 +57,7 @@ def info():
 
 
 @app.route('/limit', methods = ['POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def limit():
 	if flask.request.is_json:
 		data = flask.request.get_json()
@@ -70,7 +70,7 @@ def limit():
 		return flask.redirect('/error/format')
 
 @app.route('/limits', methods = ['POST', 'GET',])
-@cross_origin()
+@cross_origin(origin='*')
 def limits():
 	if flask.request.method == 'GET':
 		return flask.jsonify(manager.getLimits())
@@ -88,12 +88,12 @@ def limits():
 		return flask.redirect('/error/format')
 
 @app.route('/notify', methods = ['POST',])
-@cross_origin()
+@cross_origin(origin='*')
 def notify():
 	return flask.jsonify(manager.getNotifications())
 
 @app.route('/images/<host>/<path>')
-@cross_origin()
+@cross_origin(origin='*')
 def images(host, path):
 	image = img_path.format(host, path)
 	print image
@@ -106,7 +106,7 @@ def images(host, path):
 		return flask.redirect('/error/noImageFound')
 
 @app.route('/error/<typeE>', methods = ['GET', 'POST'])
-@cross_origin()
+@cross_origin(origin='*')
 def error(typeE):
 	data = {}
 	data['error'] = typeE
