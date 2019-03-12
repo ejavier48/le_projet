@@ -9,6 +9,8 @@ class Agent():
 		self._community = community
 		self._status = None
 		self._time =  int(time())
+		self._numInterFs = 0
+		self._interfaces = []
 
 	def setTime(self, cTime):
 		self._time = cTime
