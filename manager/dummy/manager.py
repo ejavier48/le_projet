@@ -88,7 +88,7 @@ class ManagerSNMP():
 	"""
 	"""
 	_limit = {
-		'type' : RAM', 
+		'label' : RAM', 
 		'vals' : {
 			'Ready' : .25,
 			'Set' ; .35,
@@ -267,8 +267,7 @@ class ManagerSNMP():
 
 						if label is not None:
 
-							noti = Notification(hostname, 'CPU ' + str(i+1), label, 
-								self._limits['CPU'][label], cpusUse[i])
+							noti = Notification(hostname, 'CPU ' + str(i+1), label, self._limits['CPU'][label], cpusUse[i])
 							
 							if not i in self._notifications[hostname]['CPU']:
 								self._notifications[hostname]['CPU'][i] = []
@@ -459,7 +458,7 @@ class ManagerSNMP():
 								'--step', '10',
 								'DS:in:COUNTER:600:0:U',
 								'DS:out:COUNTER:600:0:U',
-								'RRA:AVERAGE:0.5:5:80',
+								'RRA:AVERAGE:0.5:2:80',
 								'RRA:AVERAGE:0.5:1:100')
 
 					if ret:
@@ -472,7 +471,7 @@ class ManagerSNMP():
 								'--start', 'N', 
 								'--step', '10',
 								'DS:ram:GAUGE:600:0:U',
-								'RRA:AVERAGE:0.5:5:100')
+								'RRA:AVERAGE:0.5:2:100')
 				if ret:
 					print name, rrdtool.error()	
 
@@ -486,7 +485,7 @@ class ManagerSNMP():
 								'--start', 'N', 
 								'--step', '10',
 								'DS:load:GAUGE:600:0:100',
-								'RRA:AVERAGE:0.5:5:100')
+								'RRA:AVERAGE:0.5:2:100')
 
 					if ret:
 						print name, rrdtool.error()
@@ -498,7 +497,7 @@ class ManagerSNMP():
 								'--start', 'N', 
 								'--step', '10',
 								'DS:use:GAUGE:600:0:U',
-								'RRA:AVERAGE:0.5:5:100')
+								'RRA:AVERAGE:0.5:2:100')
 				if ret:
 					print name, rrdtool.error()	
 			
@@ -510,8 +509,8 @@ class ManagerSNMP():
 								'--step', '10',
 								'DS:in:COUNTER:600:0:U',
 								'DS:out:COUNTER:600:0:U',
-								'RRA:AVERAGE:0.5:5:80',
-								'RRA:AVERAGE:0.5:1:100')
+								'RRA:AVERAGE:0.5:2:80',
+								'RRA:AVERAGE:0.5:2:100')
 				if ret:
 					print name, rrdtool.error()	
 
@@ -764,22 +763,38 @@ class ManagerSNMP():
 			return {}
 		return self._agents[hostname].getDict()
 
-	def _checkLimType(self, limType):
-		return limType in self._limits
+	def _checkLimType(self, label):
+		return label in self._limits
 
 	def setAllLimits(self, limits):
-		for limit in limits:
-			if self._checkLimType(limit):
-				self._limits[limit] = limits[limit]
+		for label in limits:
+			if self._checkLimType(label):
+				
+				self._limits[label] = {}
+				aux = limits[label]
+
+				for val in aux:
+					self._limits[label][val] = float(aux[val])
 			else:
-				print limit
+				print label
 				return False
 		print self._limits
 		return True
 
+	def getLimits(self):
+		return self._limits
+
 	def setLimit(self, limit):
-		if self._checkLimType(limit['type']):
-			self._limits[limit['type']] = limit['type']['vals']
+		if self._checkLimType(limit['label']):
+
+			label = limit['label']
+			self._limits[label] = {}
+
+			aux = limit['vals']
+
+			for lim in aux:
+				self._limits[label][lim] = float(aux[lim])
+
 			return True
 		else:
 			return False
