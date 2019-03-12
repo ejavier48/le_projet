@@ -67,20 +67,47 @@ class ManagerSNMP():
 		'hdd',
 	]
 
+	"""
 	_limits = {
-		'RAM' : .50,
-		'CPU' : 50,
-		'HDD' : .60,
-		'Time': 300,
+		'RAM' : {
+			'Ready' : .25,
+			'Set' ; .35,
+			'Go' : .30,
+		},
+		'CPU' : {
+			'Ready' : 25,
+			'Set' ; 50,
+			'Go' : 80,
+		},
+		'HDD' : {
+			'Ready' : .05,
+			'Set' ; .10,
+			'Go' : .35,
+		},
 	}
+	"""
+	"""
+	_limit = {
+		'type' : RAM', 
+		'vals' : {
+			'Ready' : .25,
+			'Set' ; .35,
+			'Go' : .30,
+		},
+	}
+	"""
 
 	_notifications = {}
 	
 	def __init__(self):
+
+		self._numAgents = 0
 		self._agents = {}
+		self._limits = {'RAM': None, 'CPU': None, 'HDD': None, 'Time':300}
+
 		self._new = []
 		self._newNotification = []
-		self._numAgents = 0
+
 		self._thread = Thread(target = self._updateRRD, args = ())
 		self._thread.daemon = True
 		self._thread.start()
@@ -217,9 +244,31 @@ class ManagerSNMP():
 						a = [x.prettyPrint() for x in varBind]
 						cpusUse[i] = int(a[1])
 
-						if self._limits['CPU'] < cpusUse[i]:
+						fn = self._names[6]
+						nRRD = self._fname[fn].format(hostname, i, 'rrd')
 
-							noti = Notification(hostname, 'CPU ' + str(i+1), self._limits['CPU'], cpusUse[i])
+						value = ':'.join(['N', a[1]])
+						
+						try:
+							ret = rrdtool.update(nRRD, value) 
+						except:
+							print 'problem update cpu _getCPUsUse'
+
+						if self._limits['CPU'] is None:
+							continue
+
+						label = None
+
+						for limit in self._limits['CPU']:
+							valLimit = self._limits['CPU'][limit]
+							if valLimit < cpusUse[i]:
+								label = limit
+
+
+						if label is not None:
+
+							noti = Notification(hostname, 'CPU ' + str(i+1), label, 
+								self._limits['CPU'][label], cpusUse[i])
 							
 							if not i in self._notifications[hostname]['CPU']:
 								self._notifications[hostname]['CPU'][i] = []
@@ -230,19 +279,9 @@ class ManagerSNMP():
 								last = self._notifications[hostname]['CPU'][i][-1]
 								diff = noti.getTimeReport() - last.getTimeReport()
 
-								if self._limits['Time'] < diff:
+								if self._limits['Time'] < diff or last.getLabel() != noti.getLabel():
 									self._notifications[hostname]['CPU'][i].append(noti)
 									self._newNotification.append(noti.getReport())	
-
-						fn = self._names[6]
-						nRRD = self._fname[fn].format(hostname, i, 'rrd')
-
-						value = ':'.join(['N', a[1]])
-						
-						try:
-							ret = rrdtool.update(nRRD, value) 
-						except:
-							print 'problem update cpu _getCPUsUse'
 
 			self._agents[hostname].setCPUsUse(cpusUse)
 
@@ -355,15 +394,30 @@ class ManagerSNMP():
 				elif i == 1:
 					self._agents[hostname].setRAMUse(int(a[1]))
 
-					x = self._agents[hostname].getRAMSize() * self._limits['RAM']
-
 					fn = self._names[5]
 					nRRD = self._fname[fn].format(hostname, 'rrd')
 					value = ':'.join(['N', a[1]])
 
-					if x < self._agents[hostname].getRAMUse():
+					try:
+						ret = rrdtool.update(nRRD, value) 
+					except:
+						print 'problem update ram _getAgentData'
+
+					if self._limits['RAM'] is None:
+						continue
+
+					label = None
+
+					for limit in self._limits['RAM']:
 						
-						noti = Notification(hostname, 'RAM', x, self._agents[hostname].getRAMUse())
+						valLimit = self._agents[hostname].getRAMSize() * self._limits['RAM'][limit]
+
+						if valLimit < self._agents[hostname].getRAMUse():
+							label = limit
+
+					if label is not None:
+												
+						noti = Notification(hostname, 'RAM', label, self._limits['RAM'][label], self._agents[hostname].getRAMUse())
 						flag = True
 
 						if 0 < len(self._notifications[hostname]['RAM']):
@@ -371,7 +425,7 @@ class ManagerSNMP():
 							last = self._notifications[hostname]['RAM'][-1]
 							diff = noti.getTimeReport() - last.getTimeReport()
 
-							if  diff < self._limits['Time']:
+							if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
 								flag = False
 
 						if flag:
@@ -379,11 +433,7 @@ class ManagerSNMP():
 							self._newNotification.append(noti.getReport())
 
 
-					if True:#try:
-						ret = rrdtool.update(nRRD, value) 
-
-					else:#except:
-						print 'problem update ram _getAgentData'
+					
 				else:
 					print 'error'
 				i += 1
@@ -407,8 +457,8 @@ class ManagerSNMP():
 					ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:in:COUNTER:600:U:U',
-								'DS:out:COUNTER:600:U:U',
+								'DS:in:COUNTER:600:0:U',
+								'DS:out:COUNTER:600:0:U',
 								'RRA:AVERAGE:0.5:5:80',
 								'RRA:AVERAGE:0.5:1:100')
 
@@ -421,7 +471,7 @@ class ManagerSNMP():
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:ram:COUNTER:600:U:U',
+								'DS:ram:GAUGE:600:0:U',
 								'RRA:AVERAGE:0.5:5:100')
 				if ret:
 					print name, rrdtool.error()	
@@ -435,7 +485,7 @@ class ManagerSNMP():
 					ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:load:GAUGE:600:U:100',
+								'DS:load:GAUGE:600:0:100',
 								'RRA:AVERAGE:0.5:5:100')
 
 					if ret:
@@ -447,7 +497,7 @@ class ManagerSNMP():
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:use:GAUGE:600:U:U',
+								'DS:use:GAUGE:600:0:U',
 								'RRA:AVERAGE:0.5:5:100')
 				if ret:
 					print name, rrdtool.error()	
@@ -458,8 +508,8 @@ class ManagerSNMP():
 				ret = rrdtool.create(name, 
 								'--start', 'N', 
 								'--step', '10',
-								'DS:in:COUNTER:600:U:U',
-								'DS:out:COUNTER:600:U:U',
+								'DS:in:COUNTER:600:0:U',
+								'DS:out:COUNTER:600:0:U',
 								'RRA:AVERAGE:0.5:5:80',
 								'RRA:AVERAGE:0.5:1:100')
 				if ret:
@@ -631,7 +681,7 @@ class ManagerSNMP():
 									'VDEF:CPUmin=load,MINIMUM',
 									'VDEF:CPUavg=load,AVERAGE',
 									'VDEF:CPUmax=load,MAXIMUM',
-									'COMMENT:		Now		Min		Avg		Max//n',
+									'COMMENT:Now 	Min 	Avg		Max//n',
 									'GPRINT:CPUlast:%12.0lf%s',
 									'GPRINT:CPUmin:%10.0lf%s',
 									'GPRINT:CPUavg:%13.0lf%s',
@@ -713,3 +763,23 @@ class ManagerSNMP():
 		if not hostname in self._agents:
 			return {}
 		return self._agents[hostname].getDict()
+
+	def _checkLimType(self, limType):
+		return limType in self._limits
+
+	def setAllLimits(self, limits):
+		for limit in limits:
+			if self._checkLimType(limit):
+				self._limits[limit] = limits[limit]
+			else:
+				print limit
+				return False
+		print self._limits
+		return True
+
+	def setLimit(self, limit):
+		if self._checkLimType(limit['type']):
+			self._limits[limit['type']] = limit['type']['vals']
+			return True
+		else:
+			return False

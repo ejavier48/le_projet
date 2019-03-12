@@ -19,7 +19,7 @@ def home():
 
 @app.route('/add', methods = ['POST'])
 def addAgent():
-	try:
+	if flask.request.is_json:
 		data = flask.request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
 
@@ -28,7 +28,7 @@ def addAgent():
 		else:
 			return flask.redirect('/error/NoConnected')
 
-	except:
+	else:
 		return flask.redirect('/error/format')
 
 @app.route('/delete', methods = ['POST'])
@@ -37,7 +37,6 @@ def deleteAgent():
 		data = flask.request.get_json()
 		manager.delAgent(data['host'])
 		return flask.jsonify({'status':True})
-
 	except:
 		return flask.redirect('/error/format')
 
@@ -47,6 +46,30 @@ def info():
 	ans = manager.getAgentDict(data['host'])
 	return flask.jsonify(ans)
 
+
+@app.route('/limit', methods = ['POST'])
+def limit():
+	if flask.request.is_json:
+		data = flask.request.get_json()
+		print data
+		if not manager.setLimit(data):
+			return flask.redirect('/error/InvalideLimit')
+		else:
+			return flask.jsonify({'status':True})
+	else:
+		return flask.redirect('/error/format')
+
+@app.route('/limits', methods = ['POST'])
+def limits():
+	try:#if flask.request.is_json:
+		data = flask.request.get_json()
+		print data
+		if not manager.setAllLimits(data):
+			return flask.redirect('/error/InvalideLimit')
+		else:
+			return flask.jsonify({'status':True})
+	except:
+		return flask.redirect('/error/format')
 
 @app.route('/notify', methods = ['POST',])
 def notify():
