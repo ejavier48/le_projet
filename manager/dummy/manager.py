@@ -113,7 +113,7 @@ class ManagerSNMP():
 		self._thread.start()
 
 	def _getBasicData(self, hostname):
-		if True:#try:
+		if True:#if True:#try:
 			eIndi, eStatus, eIndex, vBinds = next(
 				getCmd(SnmpEngine(),
 					CommunityData(self._agents[hostname].getCommunity()), 
@@ -168,12 +168,12 @@ class ManagerSNMP():
 				self._new.remove(hostname)
 
 				return True
-		else:#except:
+		else:#else:#except:
 			print 'error _getBasicData'
 			return False
 
 	def _getNumCPUs(self, hostname):
-		if True:#try:
+		if True:#if True:#try:
 			walk = nextCmd(SnmpEngine(),
 				CommunityData(self._agents[hostname].getCommunity()),
 				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
@@ -214,7 +214,7 @@ class ManagerSNMP():
 		if not hostname in self._agents:
 			return
 
-		if True:#try:
+		if True:#if True:#try:
 			walk = nextCmd(SnmpEngine(),
 				CommunityData(self._agents[hostname].getCommunity()),
 				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
@@ -249,9 +249,9 @@ class ManagerSNMP():
 
 						value = ':'.join(['N', a[1]])
 						
-						try:
+						if True:#try:
 							ret = rrdtool.update(nRRD, value) 
-						except:
+						else:#except:
 							print 'problem update cpu _getCPUsUse'
 
 						if self._limits['CPU'] is None:
@@ -284,7 +284,7 @@ class ManagerSNMP():
 
 			self._agents[hostname].setCPUsUse(cpusUse)
 
-		else:#except:
+		else:#else:#except:
 			print 'something wrong _getPerCPUs'
 
 	def _getAgentInterFs(self, hostname):
@@ -397,9 +397,9 @@ class ManagerSNMP():
 					nRRD = self._fname[fn].format(hostname, 'rrd')
 					value = ':'.join(['N', a[1]])
 
-					try:
+					if True:#try:
 						ret = rrdtool.update(nRRD, value) 
-					except:
+					else:#except:
 						print 'problem update ram _getAgentData'
 
 					if self._limits['RAM'] is None:
@@ -581,10 +581,10 @@ class ManagerSNMP():
 								nRRD = self._fname[fn].format(hostname, 'rrd')
 
 								#Prevent exception if agents and files were deleted
-								try:
+								if True:#try:
 									ret = rrdtool.update(nRRD, value) 
 
-								except:
+								else:#except:
 									print 'problem update for in out'
 									break
 							i += 1
@@ -607,7 +607,7 @@ class ManagerSNMP():
 		if not hostname in self._agents: # preventing in case of agent deleted
 			return 
 
-		if True:#try:
+		if True:#if True:#try:
 			for fname in self._fname:
 
 				if fname == self._names[4]:
@@ -706,7 +706,7 @@ class ManagerSNMP():
 										'LINE1:in#0F0F0F:In Traffic',
 										'LINE2:out#000FFF:Out Traffic')
 
-		else:#except: #preventing exception if agent deleted
+		else:#else:#except: #preventing exception if agent deleted
 			print 'problem graphs'
 			return 
 
@@ -732,7 +732,7 @@ class ManagerSNMP():
 		return self._getBasicData(hostname)
 
 	def delAgent(self, hostname):
-		try:
+		if True:#try:
 			self._agents[hostname].setStatus(False)
 			del self._agents[hostname]
 			del self._notifications[hostname]
@@ -743,7 +743,7 @@ class ManagerSNMP():
 				remove(file)
 			return True
 
-		except:
+		else:#except:
 			return False
 
 	def getDict(self):
