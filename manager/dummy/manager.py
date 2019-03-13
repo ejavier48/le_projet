@@ -70,33 +70,31 @@ class ManagerSNMP():
 	]
 
 	"""
-	_limits = {
-		'RAM' : {
-			'Ready' : .25,
-			'Set' ; .35,
-			'Go' : .30,
-		},
-		'CPU' : {
-			'Ready' : 25,
-			'Set' ; 50,
-			'Go' : 80,
-		},
-		'HDD' : {
-			'Ready' : .05,
-			'Set' ; .10,
-			'Go' : .35,
-		},
-	}
-	"""
-	"""
-	_limit = {
-		'label' : RAM', 
-		'vals' : {
-			'Ready' : .25,
-			'Set' ; .35,
-			'Go' : .30,
-		},
-	}
+		_limits = {
+			'RAM' : {
+				'Ready' : .25,
+				'Set' ; .35,
+				'Go' : .30,
+			},
+			'CPU' : {
+				'Ready' : 25,
+				'Set' ; 50,
+				'Go' : 80,
+			},
+			'HDD' : {
+				'Ready' : .05,
+				'Set' ; .10,
+				'Go' : .35,
+			},
+		}
+		_limit = {
+			'label' : RAM', 
+			'vals' : {
+				'Ready' : .25,
+				'Set' ; .35,
+				'Go' : .30,
+			},
+		}
 	"""
 
 	_notifications = {}
@@ -731,9 +729,18 @@ class ManagerSNMP():
 							'GPRINT:loadMAX:%6.2lf %SMAX',
 							'GPRINT:loadMIN:%6.2lf %SMIN',
 							'GPRINT:loadSTDEV:%6.2lf %SSTDEV',
-							'GPRINT:loadLAST:%6.2lf %SLAST'
+							'GPRINT:loadLAST:%6.2lf %SLAST',
+							'VDEF:a=load,LSLSLOPE',
+							'VDEF:b=load,LSLINT',
+							'CDEF:avg2=load,POP,a,COUNT,*,b,+',
+							'LINE2:avg2#FFBB00',
+							'COMMENT: \\n',
+							'CDEF:seg=avg2,40,60,LIMIT',
+							'VDEF:minseg=seg,FIRST',
+							'VDEF:maxseg=seg,LAST',
+							'GPRINT:minseg: Reach 40% @ %c \\n:strftime',
+							'GPRINT:maxseg: Reach 60% @ %c \\n:strftime',
 						]
-
 						graph = filter(None, graph)
 
 						ret = rrdtool.graph(graph)
@@ -846,6 +853,7 @@ class ManagerSNMP():
 
 	def getLimits(self):
 		return self._limits
+
 	def setLimit(self, limit):
 
 		if self._checkLimType(limit['label']):
@@ -863,6 +871,45 @@ class ManagerSNMP():
 		else:
 			return False
 
+	def _graphCheck(self, tQuery):
+		try:
+			nImg = './agents/localhost_cpu0.png'
+			nRRD = './agents/localhost_cpu0.rrd'
+
+			graph = [nImg,
+					'--start', tQuery,
+					'--vertical-label=CPU 0 Load',
+					'--title=CPU Use',
+					'--color','ARROW#009900',
+					'--vertical-label','CPU Use(%)',
+					'--lower-limit','0',
+					'--upper-limit','100',
+					'DEF:load='+nRRD+':load:AVERAGE',
+					'VDEF:loadMAX=load,MAXIMUM',
+					'VDEF:loadMIN=load,MINIMUM',
+					'VDEF:loadSTDEV=load,STDEV',
+					'VDEF:loadLAST=load,LAST',
+					'AREA:load#00FF00:CPU Load', 
+					'GPRINT:loadMAX:%6.2lf %SMAX',
+					'GPRINT:loadMIN:%6.2lf %SMIN',
+					'GPRINT:loadSTDEV:%6.2lf %SSTDEV',
+					'GPRINT:loadLAST:%6.2lf %SLAST',
+					'VDEF:a=load,LSLSLOPE',
+					'VDEF:b=load,LSLINT',
+					'CDEF:avg2=load,POP,a,COUNT,*,b,+',
+					'LINE2:avg2#FFBB00',
+					'COMMENT: \\n',
+					'CDEF:seg=avg2,10,30,LIMIT',
+					'VDEF:minseg=seg,FIRST',
+					'VDEF:maxseg=seg,LAST',
+					'GPRINT:minseg: Reach 10% @ %c \\n:strftime',
+					'GPRINT:maxseg: Reach 30% @ %c \\n:strftime']
+			ret = rrdtool.graph(graph)
+			return True
+
+		except KeyError:
+			return False
+
 
 	def rrdFile(self, date):
 		try:
@@ -871,10 +918,10 @@ class ManagerSNMP():
 			date[1] = date[1] + '.00Z'
 			date = ''.join(date)
 			date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ').timetuple()
-			tQuery = mktime(date)
+			tQuery = int(mktime(date))
 			print tQuery
-			return True
-		except:
+			return self._graphCheck(str(tQuery))
+		except KeyError:
 			print 'Error time'
 			return False
 
