@@ -72,6 +72,12 @@ class Agent():
 	def setRAMUse(self, ramUse):
 		self._ramUse = ramUse
 
+	def setHDDSize(self, hddSize):
+		self._hddSize = hddSize
+
+	def setHDDUse(self, hddUse):
+		self._hddUse = hddUse
+
 	def setNumCPUs(self, numCPUs):
 		self._numCPUs = numCPUs
 
@@ -126,11 +132,20 @@ class Agent():
 	def getRAMUse(self):
 		return self._ramUse
 
+	def getHDDSize(self):
+		return self._hddSize
+
+	def getHDDUse(self):
+		return self._hddUse
+
 	def getNumCPUs(self):
 		return self._numCPUs
 
 	def getCPUsUse(self):
 		return self._cpusUse
+
+	def getOS(self):
+		return self._os
 
 	def getDict(self):
 		self._numInterFs = len(self._interfaces)

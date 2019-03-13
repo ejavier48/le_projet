@@ -21,6 +21,7 @@ import rrdtool
 class ManagerSNMP():
 	_querys = {
 		'MIB'			: '1.3.6.1.2.1',
+		'UCD'			: '1.3.6.1.4.1.2021',
 		'Info'			: '.1.1.0',
 		'UpTime'		: '.25.1.1.0',
 		'Contact'		: '.1.4.0',
@@ -45,6 +46,8 @@ class ManagerSNMP():
 		'RAMUse'		: '.25.2.3.1.6.1',
 		'CPUNum'		: '.25.3.3.1.1',
 		'CPUUse'		: '.25.3.3.1.2',
+		'HDDSize'		: '.9.1.6.2',
+		'HDDUse'		: '.9.1.8.2',
 	}
 
 	_fname = {
@@ -437,17 +440,99 @@ class ManagerSNMP():
 							if flag:
 								self._notifications[hostname]['RAM'].append(noti)
 								self._newNotification.append(noti.getReport())
-
-
 						
 					else:
 						print 'error'
 					i += 1
 
 				self._agents[hostname].setStatus(True)
+				if self._agents[hostname].getOS() == 'linux':
+					self._getAgentHDDLin(hostname)
+				else:
+					None
 
 		except KeyError:
 			print 'Exception _getAgentData'
+
+	def _getAgentHDDLin(self, hostname):
+
+		if not hostname in self._agents:
+			return
+
+		try:
+
+			eIndi, eStatus, eIndex, vBinds = next(
+				getCmd(SnmpEngine(),
+					CommunityData(self._agents[hostname].getCommunity()), 
+					UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+					ContextData(),
+					ObjectType(ObjectIdentity(self._querys['UCD'] + self._querys['HDDSize'])),
+					ObjectType(ObjectIdentity(self._querys['UCD'] + self._querys['HDDUse'])),)
+				)
+			
+			if eIndi:
+				print eIndi
+				#self._agents[hostname].setStatus(False)
+
+			elif eStatus:
+				print eIndex, eStatus
+				#self._agents[hostname].setStatus(False)
+
+			else:
+				i = 0
+				for varBind in vBinds:
+					a = [x.prettyPrint() for x in varBind]
+
+					if i == 0:
+						self._agents[hostname].setHDDSize(int(a[1]))
+
+					elif i == 1:
+						self._agents[hostname].setHDDUse(int(a[1]))
+
+						fn = self._names[7]
+						nRRD = self._fname[fn].format(hostname, 'rrd')
+						value = ':'.join(['N', a[1]])
+
+						try:
+							ret = rrdtool.update(nRRD, value) 
+						except:
+							print 'problem update HDD _getAgentHDDLin'
+
+						if self._limits['HDD'] is None:
+							continue
+
+						label = None
+
+						for limit in self._limits['HDD']:
+							
+							valLimit = self._agents[hostname].getHDDSize() * self._limits['HDD'][limit]
+
+							if valLimit < self._agents[hostname].getHDDUse():
+								label = limit
+
+						if label is not None:
+													
+							noti = Notification(hostname, 'HDD', label, self._limits['HDD'][label], self._agents[hostname].getHDDUse())
+							flag = True
+
+							if 0 < len(self._notifications[hostname]['HDD']):
+
+								last = self._notifications[hostname]['HDD'][-1]
+								diff = noti.getTimeReport() - last.getTimeReport()
+
+								if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
+									flag = False
+
+							if flag:
+								self._notifications[hostname]['HDD'].append(noti)
+								self._newNotification.append(noti.getReport())
+
+					else:
+						print 'error HDD', i
+					i += 1
+
+		except KeyError:
+			print 'Exception _getAgentHDDLin'
 
 	def _createRRD(self, hostname):
 
@@ -505,7 +590,7 @@ class ManagerSNMP():
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
 									'--step', '10',
-									'DS:use:GAUGE:600:0:U',
+									'DS:hdd:GAUGE:600:0:U',
 									'RRA:AVERAGE:0.5:2:100')
 					if ret:
 						print name, rrdtool.error()	
@@ -655,29 +740,64 @@ class ManagerSNMP():
 					nImg = name.format(hostname, 'png')
 					nRRD = name.format(hostname, 'rrd')
 
-					ret = rrdtool.graph(nImg,
+					limit = self._limits['RAM']
+
+					rVal = 0					
+					sVal = 0					
+					gVal = 0
+
+					if limit:
+						rVal = int(limit['Ready'] * self._agents[hostname].getRAMSize())
+						sVal = int(limit['Set'] * self._agents[hostname].getRAMSize())
+						gVal = int(limit['Go'] * self._agents[hostname].getRAMSize())
+						rPer = int(limit['Ready'] * 100)
+						sPer = int(limit['Set'] * 100)
+						gPer = int(limit['Go'] * 100)
+
+					graph = [nImg,
 						'--start', str(self._agents[hostname].getTime()),
 						'--vertical-label=Megabytes',
 						'--title=RAM Use',
 						'--color', 'ARROW#009900',
 						'--vertical-label', 'RAM Use MB',
 						'DEF:ram='+nRRD+':ram:AVERAGE',
+
+						'CDEF:umbral'+str(rPer)+'=ram,'+str(rVal)+',LT,0,ram,IF' if limit else None,
+						'CDEF:umbral'+str(sPer)+'=ram,'+str(sVal)+',LT,0,ram,IF' if limit else None,
+						'CDEF:umbral'+str(gPer)+'=ram,'+str(gVal)+',LT,0,ram,IF' if limit else None,
+
+						'VDEF:ramMAX=ram,MAXIMUM',
+						'VDEF:ramMIN=ram,MINIMUM',
+						'VDEF:ramSTDEV=ram,STDEV',
+						'VDEF:ramLAST=ram,LAST',
 						'AREA:ram#00FF00:RAM Use',
-						'LINE1:30',
-						'AREA:5#ff000022:stack',
-						'VDEF:RAMlast=ram,LAST',
-						'VDEF:RAMmin=ram,MINIMUM',
-						'VDEF:RAMavg=ram,AVERAGE',
-						'VDEF:RAMmax=ram,MAXIMUM',
-						'COMMENT:	Now		Min		Avg		Max//n',
-						'GPRINT:RAMlast:%12.0lf%s',
-						'GPRINT:RAMmin:%10.0lf%s',
-						'GPRINT:RAMavg:%13.0lf%s',
-						'GPRINT:RAMmax:%13.0lf%s',
+
+						'AREA:umbral'+str(rPer)+'#FFDF00:RAM Use greater than ' + str(rPer) + '%' if limit else None,
+						'AREA:umbral'+str(sPer)+'#DD4E03:RAM Use greater than ' + str(sPer) + '%' if limit else None,
+						'AREA:umbral'+str(gPer)+'#730000:RAM Use greater than ' + str(gPer) + '%' if limit else None,
+
+						'HRULE:'+str(rVal)+'#F6D911:Umbral ' + str(1) + ' - ' + str(rPer) + '%' if limit else None,
+						'HRULE:'+str(sVal)+'#FF5800:Umbral ' + str(rPer) + ' - ' + str(sPer) + '%' if limit else None,
+						'HRULE:'+str(gVal)+'#FF0000:Umbral ' + str(sPer) + ' - ' + str(gPer) + '%' if limit else None,
+
+						'GPRINT:ramMAX:%6.2lf %SMAX',
+						'GPRINT:ramMIN:%6.2lf %SMIN',
+						'GPRINT:ramSTDEV:%6.2lf %SSTDEV',
+						'GPRINT:ramLAST:%6.2lf %SLAST',
 						'VDEF:a=ram,LSLSLOPE',
 						'VDEF:b=ram,LSLINT',
 						'CDEF:avg2=ram,POP,a,COUNT,*,b,+',
-						'LINE2:avg2#FFBB00')
+						'LINE2:avg2#FFBB00',
+						'COMMENT: \\n',
+						'CDEF:seg=avg2,40,60,LIMIT',
+						'VDEF:minseg=seg,FIRST',
+						'VDEF:maxseg=seg,LAST',
+						'GPRINT:minseg: Reach 40% @ %c \\n:strftime',
+						'GPRINT:maxseg: Reach 60% @ %c \\n:strftime',
+					]
+					graph = filter(None, graph)
+
+					ret = rrdtool.graph(graph)
 
 				elif fname == self._names[6]:
 					#cpu
@@ -746,7 +866,68 @@ class ManagerSNMP():
 						ret = rrdtool.graph(graph)
 
 				elif fname == self._names[7]:
-					None
+					name = self._fname[fname]
+					nImg = name.format(hostname, 'png')
+					nRRD = name.format(hostname, 'rrd')
+
+					limit = self._limits['HDD']
+
+					rVal = 0					
+					sVal = 0					
+					gVal = 0
+
+					if limit:
+						rVal = int(limit['Ready'] * self._agents[hostname].getHDDSize())
+						sVal = int(limit['Set'] * self._agents[hostname].getHDDSize())
+						gVal = int(limit['Go'] * self._agents[hostname].getHDDSize())
+						rPer = int(limit['Ready'] * 100)
+						sPer = int(limit['Set'] * 100)
+						gPer = int(limit['Go'] * 100)
+
+					graph = [nImg,
+						'--start', str(self._agents[hostname].getTime()),
+						'--vertical-label=Megabytes',
+						'--title=HDD Use',
+						'--color', 'ARROW#009900',
+						'--vertical-label', 'HDD Use',
+						'DEF:hdd='+nRRD+':hdd:AVERAGE',
+
+						'CDEF:umbral'+str(rPer)+'=hdd,'+str(rVal)+',LT,0,hdd,IF' if limit else None,
+						'CDEF:umbral'+str(sPer)+'=hdd,'+str(sVal)+',LT,0,hdd,IF' if limit else None,
+						'CDEF:umbral'+str(gPer)+'=hdd,'+str(gVal)+',LT,0,hdd,IF' if limit else None,
+
+						'VDEF:hddMAX=hdd,MAXIMUM',
+						'VDEF:hddMIN=hdd,MINIMUM',
+						'VDEF:hddSTDEV=hdd,STDEV',
+						'VDEF:hddLAST=hdd,LAST',
+						'AREA:hdd#00FF00:HDD Use',
+
+						'AREA:umbral'+str(rPer)+'#FFDF00:HDD Use greater than ' + str(rPer) + '%' if limit else None,
+						'AREA:umbral'+str(sPer)+'#DD4E03:HDD Use greater than ' + str(sPer) + '%' if limit else None,
+						'AREA:umbral'+str(gPer)+'#730000:HDD Use greater than ' + str(gPer) + '%' if limit else None,
+
+						'HRULE:'+str(rVal)+'#F6D911:Umbral ' + str(1) + ' - ' + str(rPer) + '%' if limit else None,
+						'HRULE:'+str(sVal)+'#FF5800:Umbral ' + str(rPer) + ' - ' + str(sPer) + '%' if limit else None,
+						'HRULE:'+str(gVal)+'#FF0000:Umbral ' + str(sPer) + ' - ' + str(gPer) + '%' if limit else None,
+
+						'GPRINT:hddMAX:%6.2lf %SMAX',
+						'GPRINT:hddMIN:%6.2lf %SMIN',
+						'GPRINT:hddSTDEV:%6.2lf %SSTDEV',
+						'GPRINT:hddLAST:%6.2lf %SLAST',
+						'VDEF:a=hdd,LSLSLOPE',
+						'VDEF:b=hdd,LSLINT',
+						'CDEF:avg2=hdd,POP,a,COUNT,*,b,+',
+						'LINE2:avg2#FFBB00',
+						'COMMENT: \\n',
+						'CDEF:seg=avg2,40,60,LIMIT',
+						'VDEF:minseg=seg,FIRST',
+						'VDEF:maxseg=seg,LAST',
+						'GPRINT:minseg: Reach 40% @ %c \\n:strftime',
+						'GPRINT:maxseg: Reach 60% @ %c \\n:strftime',
+					]
+					graph = filter(None, graph)
+
+					ret = rrdtool.graph(graph)
 					#hdd
 				else:
 
@@ -909,7 +1090,6 @@ class ManagerSNMP():
 
 		except KeyError:
 			return False
-
 
 	def rrdFile(self, date):
 		try:
