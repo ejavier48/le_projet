@@ -19,10 +19,10 @@
   <div *ngIf="weHaveData">
 
     <ion-card  *ngFor="let data of agentes; let i=index">
-    <img src="../../assets/img/windows.svg" *ngIf="data['_os']=='1'"/>
-    <img src="../../assets/img/linux.svg" *ngIf="data['_os']=='2' "/>
-    <img src="../../assets/img/mac.svg" *ngIf="data['_os']=='3'"/>
-    <img src="../../assets/img/desconocido.svg" *ngIf="data['_os']=='4'"/>
+    <img src="../../assets/img/windows.svg" *ngIf="data['_info']=='1'"/>
+    <img src="../../assets/img/linux.svg" *ngIf="data['_info']=='2' "/>
+    <img src="../../assets/img/mac.svg" *ngIf="data['_info']=='3'"/>
+    <img src="../../assets/img/desconocido.svg" *ngIf="data['_info']=='4'"/>
     <ion-card-content>
       <ion-card-title>
         {{data['_node']}}

@@ -165,22 +165,24 @@ async refreshData(){
   }
 
 clasificarSOAgente(indice:number){
-  if(indice==0)
+  /*if(indice==0)
   this.agentes[indice]._os='2';
   else if(indice==1)
-  this.agentes[indice]._os='1';
-  /*if(this.agentes[indice]._os.includes('windows')|| this.agentes[indice]._os.includes('windows') ){
-    this.agentes[indice]._os='1';
+  this.agentes[indice]._os='1';*/
+
+  //alert(this.agentes[indice]._info)
+  if(this.agentes[indice]._info.includes('Windows')|| this.agentes[indice]._info.includes('windows') || this.agentes[indice]._info.includes('1') ){
+    this.agentes[indice]._info='1';
   }
-  else if(this.agentes[indice]._os.includes('linux')|| this.agentes[indice]._os.includes('Debian') || this.agentes[indice]._os.includes('Ubuntu')){
-    this.agentes[indice]._os='2';
+  else if(this.agentes[indice]._info.includes('linux')|| this.agentes[indice]._info.includes('Debian') || this.agentes[indice]._info.includes('Ubuntu') || this.agentes[indice]._info.includes('2')){
+    this.agentes[indice]._info='2';
   }
-  else if(this.agentes[indice]._os.includes('OSX') || this.agentes[indice]._os.includes('Apple')){
-    this.agentes[indice]._os='3';
+  else if(this.agentes[indice]._info.includes('OSX') || this.agentes[indice]._info.includes('Apple') || this.agentes[indice]._info.includes('3')){
+    this.agentes[indice]._info='3';
   }
   else{
-    this.agentes[indice]._os='2';
-  }*/
+    this.agentes[indice]._info='4';
+  }
 }
 
   eliminar(indice:number){
