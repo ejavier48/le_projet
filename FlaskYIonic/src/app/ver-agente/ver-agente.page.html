@@ -62,7 +62,26 @@
   </div>
   <div *ngIf="hayLimites">
   <ion-button expand="block" (click)="abrirPageConsulta()">Consultar limites</ion-button>
+
+  <ion-text color="secondary" text-center>
+    <h5>CPU0</h5>
+  </ion-text>
+  <img [src]="imagencpu" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
+  <ion-text color="secondary" text-center>
+    <h5>RAM</h5>
+  </ion-text>
+  <img [src]="imagenram" alt="">
+  <ion-note>
+    Ultima consulta al servidor: {{tiempo}}
+  </ion-note>
+
   </div>
+
+  <ion-button expand="block" (click)="abrirPagePrediccion()">Consultar estimaciones</ion-button>
 
   <ion-text color="primary" text-center>
     <h3>Protocolos</h3>
