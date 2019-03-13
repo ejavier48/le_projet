@@ -874,7 +874,7 @@ class ManagerSNMP():
 	def _graphCheck(self, tQuery):
 		try:
 			nImg = './agents/localhost_cpu0.png'
-			nRRD = './agents/localhost_cpu0.rrd'
+			nRRD = './agents/lineal_cpu0.rrd'
 
 			graph = [nImg,
 					'--start', tQuery,
