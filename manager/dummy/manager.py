@@ -113,7 +113,7 @@ class ManagerSNMP():
 		self._thread.start()
 
 	def _getBasicData(self, hostname):
-		if True:#if True:#try:
+		try:
 			eIndi, eStatus, eIndex, vBinds = next(
 				getCmd(SnmpEngine(),
 					CommunityData(self._agents[hostname].getCommunity()), 
@@ -168,7 +168,8 @@ class ManagerSNMP():
 				self._new.remove(hostname)
 
 				return True
-		else:#else:#except:
+
+		except KeyError:
 			print 'error _getBasicData'
 			return False
 
@@ -213,8 +214,8 @@ class ManagerSNMP():
 
 		if not hostname in self._agents:
 			return
-
-		if True:#if True:#try:
+		
+		try:
 			walk = nextCmd(SnmpEngine(),
 				CommunityData(self._agents[hostname].getCommunity()),
 				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
@@ -284,244 +285,260 @@ class ManagerSNMP():
 
 			self._agents[hostname].setCPUsUse(cpusUse)
 
-		else:#else:#except:
+		except (KeyError, rrdtool.OperationalError) as e:
 			print 'something wrong _getPerCPUs'
 
 	def _getAgentInterFs(self, hostname):
 		
 		if not hostname in self._agents:
 			return
-		
-		walk = nextCmd(SnmpEngine(),
-			CommunityData(self._agents[hostname].getCommunity()),
-			UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-			ContextData(), 
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InOctInterFs'])),
-			ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutOctInterFs']))
-		)
-		
-		n = self._agents[hostname].getNumInterFs()
+		try:
 
-		interfaces = []
-		
-		s = self._fname[self._names[4]]
+			walk = nextCmd(SnmpEngine(),
+				CommunityData(self._agents[hostname].getCommunity()),
+				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+				ContextData(), 
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['NameInterFs'])),
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['StatusInterFs'])),
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InOctInterFs'])),
+				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutOctInterFs']))
+			)
+			
+			n = self._agents[hostname].getNumInterFs()
 
-		for i in range(n):
+			interfaces = []
+			
+			s = self._fname[self._names[4]]
 
-			eIndi, eStatus, eIndex, vBinds = next(walk)
+			for i in range(n):
 
-			if eIndi:
-				print eIndi, i
-				continue
+				eIndi, eStatus, eIndex, vBinds = next(walk)
 
-			elif eStatus:
-				print eIndex, eStatus, i
-				continue
+				if eIndi:
+					print eIndi, i
+					continue
 
-			else:
+				elif eStatus:
+					print eIndex, eStatus, i
+					continue
 
-				data = 0
-				interface = {}
+				else:
 
-				for varBind in vBinds:
-					
-					a = [x.prettyPrint() for x in varBind]
-					#print a
+					data = 0
+					interface = {}
 
-					if data == 0:
-						if a[1].find('0x') == 0:
-							a[1] = a[1][2:]
-							interface['name'] = bytearray.fromhex(a[1]).decode()
+					for varBind in vBinds:
+						
+						a = [x.prettyPrint() for x in varBind]
+						#print a
+
+						if data == 0:
+							if a[1].find('0x') == 0:
+								a[1] = a[1][2:]
+								interface['name'] = bytearray.fromhex(a[1]).decode()
+							else:
+								interface['name'] = a[1]
+						elif data == 1:
+							interface['status'] = 'Up' if a[1] == '1' else 'Down'
+
+						elif data == 2:
+							inData = int(a[1])
+
+						elif data == 3:
+							
+							outData = int(a[1])
+							
+							nRRD = s.format(hostname, i, 'rrd')
+							value = ':'.join(['N', str(inData), str(outData)])
+							
+							ret = rrdtool.update(nRRD, value)
+
 						else:
-							interface['name'] = a[1]
-					elif data == 1:
-						interface['status'] = 'Up' if a[1] == '1' else 'Down'
+							print 'Error', i
 
-					elif data == 2:
-						inData = int(a[1])
+						data += 1
 
-					elif data == 3:
-						
-						outData = int(a[1])
-						
-						nRRD = s.format(hostname, i, 'rrd')
-						value = ':'.join(['N', str(inData), str(outData)])
-						
-						ret = rrdtool.update(nRRD, value)
+					interfaces.append(interface)
 
-					else:
-						print 'Error', i
+			self._agents[hostname].setInterfaces(interfaces)
 
-					data += 1
-
-				interfaces.append(interface)
-
-		self._agents[hostname].setInterfaces(interfaces)
+		except (KeyError, rrdtool.OperationalError) as e:
+			print 'Error, _getAgentInterFs'
 
 	def _getAgentData(self, hostname):
 
 		if not hostname in self._agents:
 			return
 
-		eIndi, eStatus, eIndex, vBinds = next(
-			getCmd(SnmpEngine(),
-				CommunityData(self._agents[hostname].getCommunity()), 
-				UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-				ContextData(),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])),
-				ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['RAMUse'])),)
-			)
-		
-		if eIndi:
-			print eIndi
-			self._agents[hostname].setStatus(False)
+		try:
 
-		elif eStatus:
-			print eIndex, eStatus
-			self._agents[hostname].setStatus(False)
+			eIndi, eStatus, eIndex, vBinds = next(
+				getCmd(SnmpEngine(),
+					CommunityData(self._agents[hostname].getCommunity()), 
+					UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+					ContextData(),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['UpTime'])),
+					ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['RAMUse'])),)
+				)
+			
+			if eIndi:
+				print eIndi
+				self._agents[hostname].setStatus(False)
 
-		else:
-			i = 0
-			for varBind in vBinds:
-				a = [x.prettyPrint() for x in varBind]
+			elif eStatus:
+				print eIndex, eStatus
+				self._agents[hostname].setStatus(False)
 
-				if i == 0:
-					self._agents[hostname].setUpTime(int(a[1]))
+			else:
+				i = 0
+				for varBind in vBinds:
+					a = [x.prettyPrint() for x in varBind]
 
-				elif i == 1:
-					self._agents[hostname].setRAMUse(int(a[1]))
+					if i == 0:
+						self._agents[hostname].setUpTime(int(a[1]))
 
-					fn = self._names[5]
-					nRRD = self._fname[fn].format(hostname, 'rrd')
-					value = ':'.join(['N', a[1]])
+					elif i == 1:
+						self._agents[hostname].setRAMUse(int(a[1]))
 
-					if True:#try:
-						ret = rrdtool.update(nRRD, value) 
-					else:#except:
-						print 'problem update ram _getAgentData'
+						fn = self._names[5]
+						nRRD = self._fname[fn].format(hostname, 'rrd')
+						value = ':'.join(['N', a[1]])
 
-					if self._limits['RAM'] is None:
-						continue
+						if True:#try:
+							ret = rrdtool.update(nRRD, value) 
+						else:#except:
+							print 'problem update ram _getAgentData'
 
-					label = None
+						if self._limits['RAM'] is None:
+							continue
 
-					for limit in self._limits['RAM']:
+						label = None
+
+						for limit in self._limits['RAM']:
+							
+							valLimit = self._agents[hostname].getRAMSize() * self._limits['RAM'][limit]
+
+							if valLimit < self._agents[hostname].getRAMUse():
+								label = limit
+
+						if label is not None:
+													
+							noti = Notification(hostname, 'RAM', label, self._limits['RAM'][label], self._agents[hostname].getRAMUse())
+							flag = True
+
+							if 0 < len(self._notifications[hostname]['RAM']):
+
+								last = self._notifications[hostname]['RAM'][-1]
+								diff = noti.getTimeReport() - last.getTimeReport()
+
+								if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
+									flag = False
+
+							if flag:
+								self._notifications[hostname]['RAM'].append(noti)
+								self._newNotification.append(noti.getReport())
+
+
 						
-						valLimit = self._agents[hostname].getRAMSize() * self._limits['RAM'][limit]
+					else:
+						print 'error'
+					i += 1
 
-						if valLimit < self._agents[hostname].getRAMUse():
-							label = limit
+				self._agents[hostname].setStatus(True)
 
-					if label is not None:
-												
-						noti = Notification(hostname, 'RAM', label, self._limits['RAM'][label], self._agents[hostname].getRAMUse())
-						flag = True
-
-						if 0 < len(self._notifications[hostname]['RAM']):
-
-							last = self._notifications[hostname]['RAM'][-1]
-							diff = noti.getTimeReport() - last.getTimeReport()
-
-							if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
-								flag = False
-
-						if flag:
-							self._notifications[hostname]['RAM'].append(noti)
-							self._newNotification.append(noti.getReport())
-
-
-					
-				else:
-					print 'error'
-				i += 1
-
-			self._agents[hostname].setStatus(True)
-		
-		return
+		except KeyError:
+			print 'Exception _getAgentData'
 
 	def _createRRD(self, hostname):
 
-		for fname in self._names:
+		try:
+			for fname in self._names:
 
-			s = self._fname[fname]
+				s = self._fname[fname]
 
-			if fname == self._names[4]:
+				if fname == self._names[4]:
 
-				for i in range(self._agents[hostname].getNumInterFs()):
+					for i in range(self._agents[hostname].getNumInterFs()):
 
-					name = s.format(hostname, i, 'rrd')
+						name = s.format(hostname, i, 'rrd')
+
+						ret = rrdtool.create(name, 
+									'--start', 'N', 
+									'--step', '10',
+									'DS:in:COUNTER:600:0:U',
+									'DS:out:COUNTER:600:0:U',
+									'RRA:AVERAGE:0.5:2:80',
+									'RRA:AVERAGE:0.5:1:100')
+
+						if ret:
+							print name, rrdtool.error()
+
+				elif fname == self._names[5]:
+					#create ram
+					name = s.format(hostname, 'rrd')
+					ret = rrdtool.create(name, 
+									'--start', 'N', 
+									'--step', '10',
+									'DS:ram:GAUGE:600:0:U',
+									'RRA:AVERAGE:0.5:2:100')
+					if ret:
+						print name, rrdtool.error()	
+
+				elif fname == self._names[6]:
+					#create cpu
+					for i in range(self._agents[hostname].getNumCPUs()):
+
+						name = s.format(hostname, i, 'rrd')
+
+						ret = rrdtool.create(name, 
+									'--start', 'N', 
+									'--step', '10',
+									'DS:load:GAUGE:600:0:100',
+									'RRA:AVERAGE:0.5:2:100')
+
+						if ret:
+							print name, rrdtool.error()
+
+				elif fname == self._names[7]:
+					#hdd
+					name = s.format(hostname, 'rrd')
+					ret = rrdtool.create(name, 
+									'--start', 'N', 
+									'--step', '10',
+									'DS:use:GAUGE:600:0:U',
+									'RRA:AVERAGE:0.5:2:100')
+					if ret:
+						print name, rrdtool.error()	
+				
+				else:
+					name = s.format(hostname, 'rrd')
 
 					ret = rrdtool.create(name, 
-								'--start', 'N', 
-								'--step', '10',
-								'DS:in:COUNTER:600:0:U',
-								'DS:out:COUNTER:600:0:U',
-								'RRA:AVERAGE:0.5:2:80',
-								'RRA:AVERAGE:0.5:1:100')
-
+									'--start', 'N', 
+									'--step', '10',
+									'DS:in:COUNTER:600:0:U',
+									'DS:out:COUNTER:600:0:U',
+									'RRA:AVERAGE:0.5:2:80',
+									'RRA:AVERAGE:0.5:2:100')
 					if ret:
-						print name, rrdtool.error()
+						print name, rrdtool.error()	
 
-			elif fname == self._names[5]:
-				#create ram
-				name = s.format(hostname, 'rrd')
-				ret = rrdtool.create(name, 
-								'--start', 'N', 
-								'--step', '10',
-								'DS:ram:GAUGE:600:0:U',
-								'RRA:AVERAGE:0.5:2:100')
-				if ret:
-					print name, rrdtool.error()	
-
-			elif fname == self._names[6]:
-				#create cpu
-				for i in range(self._agents[hostname].getNumCPUs()):
-
-					name = s.format(hostname, i, 'rrd')
-
-					ret = rrdtool.create(name, 
-								'--start', 'N', 
-								'--step', '10',
-								'DS:load:GAUGE:600:0:100',
-								'RRA:AVERAGE:0.5:2:100')
-
-					if ret:
-						print name, rrdtool.error()
-
-			elif fname == self._names[7]:
-				#hdd
-				name = s.format(hostname, 'rrd')
-				ret = rrdtool.create(name, 
-								'--start', 'N', 
-								'--step', '10',
-								'DS:use:GAUGE:600:0:U',
-								'RRA:AVERAGE:0.5:2:100')
-				if ret:
-					print name, rrdtool.error()	
-			
-			else:
-				name = s.format(hostname, 'rrd')
-
-				ret = rrdtool.create(name, 
-								'--start', 'N', 
-								'--step', '10',
-								'DS:in:COUNTER:600:0:U',
-								'DS:out:COUNTER:600:0:U',
-								'RRA:AVERAGE:0.5:2:80',
-								'RRA:AVERAGE:0.5:2:100')
-				if ret:
-					print name, rrdtool.error()	
+		except (KeyError, rrdtool.OperationalError) as e:
+			print 'Error'
 
 	def _updateRRD(self):
+		
 		upImgs = 0
+
 		while(1):
+			
 			upImgs+= 1
 
 			hosts = self._agents.keys()
+			
 			for hostname in hosts:#get agent data
-				if True:
+				
+				try:
 
 					if not hostname in self._agents: # check if agent was deleted
 						continue # if deleted go next
@@ -589,25 +606,31 @@ class ManagerSNMP():
 									break
 							i += 1
 
-						if upImgs == 9:
+						if upImgs == 4:
 							self._makegraphs(hostname)
 
 
 
-				else: #Preventing exception if agent is deleted while working on it
+				except (KeyError) as e: #Preventing exception if agent is deleted while working on it
 					print 'problem update'
 					continue
 
-			if upImgs == 9:
+				except rrdtool.OperationalError:
+					print 'lallaa'
+					continue
+
+			if upImgs == 4:
 				upImgs = 0
 
-			sleep(.5)
+			sleep(1)
 
 	def _makegraphs(self, hostname):
-		if not hostname in self._agents: # preventing in case of agent deleted
-			return 
 
-		if True:#if True:#try:
+		if not hostname in self._agents: # preventing in case of agent deleted
+			return
+
+		try:
+
 			for fname in self._fname:
 
 				if fname == self._names[4]:
@@ -646,7 +669,7 @@ class ManagerSNMP():
 						'VDEF:RAMmin=ram,MINIMUM',
 						'VDEF:RAMavg=ram,AVERAGE',
 						'VDEF:RAMmax=ram,MAXIMUM',
-						'COMMENT:		Now		Min		Avg		Max//n',
+						'COMMENT:	Now		Min		Avg		Max//n',
 						'GPRINT:RAMlast:%12.0lf%s',
 						'GPRINT:RAMmin:%10.0lf%s',
 						'GPRINT:RAMavg:%13.0lf%s',
@@ -658,6 +681,17 @@ class ManagerSNMP():
 
 				elif fname == self._names[6]:
 					#cpu
+					limits = self._limits['CPU']
+
+					rVal = 0					
+					sVal = 0					
+					gVal = 0
+
+					if limits:
+						rVal = limits['Ready']
+						sVal = limits['Set']
+						gVal = limits['Go']
+
 					for i in range(self._agents[hostname].getNumCPUs()):
 
 						name = self._fname[fname]
@@ -680,7 +714,7 @@ class ManagerSNMP():
 									'VDEF:CPUmin=load,MINIMUM',
 									'VDEF:CPUavg=load,AVERAGE',
 									'VDEF:CPUmax=load,MAXIMUM',
-									'COMMENT:Now 	Min 	Avg		Max//n',
+									'COMMENT:	Now 	Min 	Avg		Max//n',
 									'GPRINT:CPUlast:%12.0lf%s',
 									'GPRINT:CPUmin:%10.0lf%s',
 									'GPRINT:CPUavg:%13.0lf%s',
@@ -706,17 +740,21 @@ class ManagerSNMP():
 										'LINE1:in#0F0F0F:In Traffic',
 										'LINE2:out#000FFF:Out Traffic')
 
-		else:#else:#except: #preventing exception if agent deleted
+		except (KeyError, rrdtool.OperationalError) as e: #preventing exception if agent deleted
 			print 'problem graphs'
 			return 
 
 	def _getAgentsData(self):
-		devices = []
-		for hostname in self._agents:
-			devices.append(self._agents[hostname].getDict())
-		return devices
+		try:
+			devices = []
+			for hostname in self._agents:
+				devices.append(self._agents[hostname].getDict())
+			return devices
+		except (KeyError) as e:
+			return self._getAgentsData()
 
 	def addAgent(self, agent):
+
 		hostname = agent.getHostName()
 		if hostname in self._agents:
 			return True
@@ -732,7 +770,11 @@ class ManagerSNMP():
 		return self._getBasicData(hostname)
 
 	def delAgent(self, hostname):
-		if True:#try:
+		try:
+
+			if not hostname in self._agents:
+				return True
+
 			self._agents[hostname].setStatus(False)
 			del self._agents[hostname]
 			del self._notifications[hostname]
@@ -743,7 +785,7 @@ class ManagerSNMP():
 				remove(file)
 			return True
 
-		else:#except:
+		except KeyError:
 			return False
 
 	def getDict(self):
@@ -755,18 +797,23 @@ class ManagerSNMP():
 	def getNotifications(self):
 		n = len(self._newNotification)
 		noti = self._newNotification[:n]
-		self._newNotification = self._newNotification[n:]
+
+		#self._newNotification = self._newNotification[n:]
+
 		return noti
 
 	def getAgentDict(self, hostname):
+
 		if not hostname in self._agents:
 			return {}
+
 		return self._agents[hostname].getDict()
 
 	def _checkLimType(self, label):
 		return label in self._limits
 
 	def setAllLimits(self, limits):
+
 		for label in limits:
 			if self._checkLimType(label):
 				
@@ -775,16 +822,17 @@ class ManagerSNMP():
 
 				for val in aux:
 					self._limits[label][val] = float(aux[val])
+
 			else:
-				print label
 				return False
-		print self._limits
+
 		return True
 
 	def getLimits(self):
 		return self._limits
 
 	def setLimit(self, limit):
+
 		if self._checkLimType(limit['label']):
 
 			label = limit['label']
@@ -796,5 +844,6 @@ class ManagerSNMP():
 				self._limits[label][lim] = float(aux[lim])
 
 			return True
+
 		else:
 			return False

@@ -25,8 +25,9 @@ def home():
 @app.route('/add', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def addAgent():
-	print flask.request
+
 	if flask.request.is_json:
+
 		data = flask.request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
 
@@ -41,11 +42,11 @@ def addAgent():
 @app.route('/delete', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def deleteAgent():
-	try:
+	if True:
 		data = flask.request.get_json()
 		manager.delAgent(data['host'])
 		return flask.jsonify({'status':True})
-	except:
+	else:
 		return flask.redirect('/error/format')
 
 @app.route('/info', methods = ['POST'])
@@ -60,27 +61,32 @@ def info():
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def limit():
 	if flask.request.is_json:
+
 		data = flask.request.get_json()
-		print data
+
 		if not manager.setLimit(data):
 			return flask.redirect('/error/InvalideLimit')
+
 		else:
 			return flask.jsonify({'status':True})
+
 	else:
 		return flask.redirect('/error/format')
 
 @app.route('/limits', methods = ['POST', 'GET',])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def limits():
+
 	if flask.request.method == 'GET':
 		return flask.jsonify(manager.getLimits())
 
 	elif flask.request.is_json:
+
 		data = flask.request.get_json()
-		print data
 
 		if not manager.setAllLimits(data):
 			return flask.redirect('/error/InvalideLimit')
+
 		else:
 			return flask.jsonify({'status':True})
 
@@ -95,9 +101,11 @@ def notify():
 @app.route('/images/<host>/<path>')
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def images(host, path):
+	
 	image = img_path.format(host, path)
-	print image
-	if True:#try:
+
+	if True:
+
 		resp = flask.make_response(open(image).read())
 		resp.content_type = 'image/png'
 		return resp
@@ -107,6 +115,7 @@ def images(host, path):
 
 @app.route('/error/<typeE>', methods = ['GET', 'POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
+
 def error(typeE):
 	data = {}
 	data['error'] = typeE
