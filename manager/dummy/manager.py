@@ -681,16 +681,16 @@ class ManagerSNMP():
 
 				elif fname == self._names[6]:
 					#cpu
-					limits = self._limits['CPU']
+					limit = self._limits['CPU']
 
 					rVal = 0					
 					sVal = 0					
 					gVal = 0
 
-					if limits:
-						rVal = limits['Ready']
-						sVal = limits['Set']
-						gVal = limits['Go']
+					if limit:
+						rVal = int(limit['Ready'])
+						sVal = int(limit['Set'])
+						gVal = int(limit['Go'])
 
 					for i in range(self._agents[hostname].getNumCPUs()):
 
@@ -698,31 +698,44 @@ class ManagerSNMP():
 						nImg = name.format(hostname, i, 'png')
 						nRRD = name.format(hostname, i, 'rrd')
 
-						ret = rrdtool.graph(nImg,
-									'--start', str(self._agents[hostname].getTime()),
-									'--vertical-label=CPU Load',
-									'--title=CPU Use',
-									'--color', 'ARROW#009900',
-									'--vertical-label', 'CPU Use(%)',
-									'--lower-limit', '0',
-									'--upper-limit', '100',
-									'DEF:load='+nRRD+':load:AVERAGE',
-									'AREA:load#00FF00:CPU Load',
-									'LINE1:30',
-									'AREA:5#ff000022:stack',
-									'VDEF:CPUlast=load,LAST',
-									'VDEF:CPUmin=load,MINIMUM',
-									'VDEF:CPUavg=load,AVERAGE',
-									'VDEF:CPUmax=load,MAXIMUM',
-									'COMMENT:	Now 	Min 	Avg		Max//n',
-									'GPRINT:CPUlast:%12.0lf%s',
-									'GPRINT:CPUmin:%10.0lf%s',
-									'GPRINT:CPUavg:%13.0lf%s',
-									'GPRINT:CPUmax:%13.0lf%s',
-									'VDEF:a=load,LSLSLOPE',
-									'VDEF:b=load,LSLINT',
-									'CDEF:avg2=load,POP,a,COUNT,*,b,+',
-									'LINE2:avg2#FFBB00' )
+						graph = [nImg,
+							'--start', str(self._agents[hostname].getTime()),
+							'--vertical-label=CPU ' + str(i) ' Load',
+							'--title=CPU Use',
+							'--color', 'ARROW#009900',
+							'--vertical-label', 'CPU Use(%)',
+							'--lower-limit', '0',
+							'--upper-limit', '100',					
+							'DEF:load='+nRRD+':load:AVERAGE',
+
+							'CDEF:umbral'+str(rVal)+'=load,'+str(rVal)+',LT,0,load,IF' if limit else None,
+							'CDEF:umbral'+str(sVal)+'=load,'+str(sVal)+',LT,0,load,IF' if limit else None,
+							'CDEF:umbral'+str(gVal)+'=load,'+str(gVal)+',LT,0,load,IF' if limit else None,
+
+							'VDEF:loadMAX=load,MAXIMUM',
+							'VDEF:loadMIN=load,MINIMUM',
+							'VDEF:loadSTDEV=load,STDEV',
+							'VDEF:loadLAST=load,LAST',
+							'AREA:load#00FF00:CPU Load',
+
+							'AREA:umbral'+str(rVal)+'#FFDF00:CPU Load greater than ' + str(rVal) + '%' if limit else None,
+							'AREA:umbral'+str(sVal)+'#DD4E03:CPU Load greater than ' + str(sVal) + '%' if limit else None,
+							'AREA:umbral'+str(gVal)+'#730000:CPU Load greater than ' + str(gVal) + '%' if limit else None,
+
+							'HRULE:'+str(rVal)+'#F6D911:Umbral ' + str(1) + ' - ' + str(rVal) + '%' if limit else None,
+							'HRULE:'+str(sVal)+'#FF5800:Umbral ' + str(rVal) + ' - ' + str(sVal) + '%' if limit else None,
+							'HRULE:'+str(gVal)+'#FF0000:Umbral ' + str(sVal) + ' - ' + str(gVal) + '%' if limit else None,
+
+							'GPRINT:loadMAX:%6.2lf %SMAX',
+							'GPRINT:loadMIN:%6.2lf %SMIN',
+							'GPRINT:loadSTDEV:%6.2lf %SSTDEV',
+							'GPRINT:loadLAST:%6.2lf %SLAST'
+						]
+
+						graph = filter(None, graph)
+
+						ret = rrdtool.graph(graph)
+
 				elif fname == self._names[7]:
 					None
 					#hdd
@@ -741,6 +754,7 @@ class ManagerSNMP():
 										'LINE2:out#000FFF:Out Traffic')
 
 		except (KeyError, rrdtool.OperationalError) as e: #preventing exception if agent deleted
+			print e
 			print 'problem graphs'
 			return 
 
@@ -798,7 +812,7 @@ class ManagerSNMP():
 		n = len(self._newNotification)
 		noti = self._newNotification[:n]
 
-		#self._newNotification = self._newNotification[n:]
+		self._newNotification = self._newNotification[n:]
 
 		return noti
 

@@ -104,13 +104,13 @@ def images(host, path):
 	
 	image = img_path.format(host, path)
 
-	if True:
+	try:
 
 		resp = flask.make_response(open(image).read())
 		resp.content_type = 'image/png'
 		return resp
 
-	else:#except:
+	except:
 		return flask.redirect('/error/noImageFound')
 
 @app.route('/error/<typeE>', methods = ['GET', 'POST'])
