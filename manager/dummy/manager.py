@@ -9,7 +9,9 @@ from glob import glob
 
 from os import remove
 
-from time import sleep
+from time import sleep, mktime
+
+from datetime import datetime 
 
 from threading import Thread
 
@@ -844,7 +846,6 @@ class ManagerSNMP():
 
 	def getLimits(self):
 		return self._limits
-
 	def setLimit(self, limit):
 
 		if self._checkLimType(limit['label']):
@@ -861,3 +862,20 @@ class ManagerSNMP():
 
 		else:
 			return False
+
+
+	def rrdFile(self, date):
+		try:
+			date = date.split(' ')
+			date[0] += 'T' 
+			date[1] = date[1] + '.00Z'
+			date = ''.join(date)
+			date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ').timetuple()
+			tQuery = mktime(date)
+			print tQuery
+			return True
+		except:
+			print 'Error time'
+			return False
+
+

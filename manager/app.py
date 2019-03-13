@@ -1,5 +1,5 @@
-#from flask import Flask, request, jsonify, redirect, make_response
-import flask
+from flask import Flask, request, jsonify, redirect, make_response
+#import flask
 import logging
 from flask_cors import CORS, cross_origin
 from dummy.manager import ManagerSNMP
@@ -8,7 +8,7 @@ from dummy.agent import Agent
 
 manager = None
 img_path = './agents/{}_{}.png'
-app = flask.Flask(__name__)
+app = Flask(__name__)
 app.secret_key = 'hgkyigkj,khbgkgiugkliuhgkuhloiyhliuhlkuhyliu'
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -20,83 +20,83 @@ logging.getLogger('flask_cors').level = logging.DEBUG
 @app.route('/', methods = ['GET','POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def home():
-	return flask.jsonify(manager.getDict())
+
+	return jsonify(manager.getDict())
 
 @app.route('/add', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def addAgent():
 
-	if flask.request.is_json:
+	if request.is_json:
 
-		data = flask.request.get_json()
+		data = request.get_json()
 		agent = Agent(data['host'], data['version'], int(data['port']), data['community'])
 
 		if (manager.addAgent(agent)):
-			return flask.redirect('/')
+			return redirect('/')
 		else:
-			return flask.redirect('/error/NoConnected')
+			return redirect('/error/NoConnected')
 
 	else:
-		return flask.redirect('/error/format')
+		return redirect('/error/format')
 
 @app.route('/delete', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def deleteAgent():
 	if True:
-		data = flask.request.get_json()
+		data = request.get_json()
 		manager.delAgent(data['host'])
-		return flask.jsonify({'status':True})
+		return jsonify({'status':True})
 	else:
-		return flask.redirect('/error/format')
+		return redirect('/error/format')
 
 @app.route('/info', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def info():
-	data = flask.request.get_json()
+	data = request.get_json()
 	ans = manager.getAgentDict(data['host'])
-	return flask.jsonify(ans)
-
+	return jsonify(ans)
 
 @app.route('/limit', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def limit():
-	if flask.request.is_json:
+	if request.is_json:
 
-		data = flask.request.get_json()
+		data = request.get_json()
 
 		if not manager.setLimit(data):
-			return flask.redirect('/error/InvalideLimit')
+			return redirect('/error/InvalideLimit')
 
 		else:
-			return flask.jsonify({'status':True})
+			return jsonify({'status':True})
 
 	else:
-		return flask.redirect('/error/format')
+		return redirect('/error/format')
 
 @app.route('/limits', methods = ['POST', 'GET',])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def limits():
 
-	if flask.request.method == 'GET':
-		return flask.jsonify(manager.getLimits())
+	if request.method == 'GET':
+		return jsonify(manager.getLimits())
 
-	elif flask.request.is_json:
+	elif request.is_json:
 
-		data = flask.request.get_json()
+		data = request.get_json()
 
 		if not manager.setAllLimits(data):
-			return flask.redirect('/error/InvalideLimit')
+			return redirect('/error/InvalideLimit')
 
 		else:
-			return flask.jsonify({'status':True})
+			return jsonify({'status':True})
 
 	else:
-		return flask.redirect('/error/format')
+		return redirect('/error/format')
 
 @app.route('/notify', methods = ['POST',])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def notify():
-	return flask.jsonify(manager.getNotifications())
+	return jsonify(manager.getNotifications())
 
 @app.route('/images/<host>/<path>')
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
@@ -106,20 +106,33 @@ def images(host, path):
 
 	try:
 
-		resp = flask.make_response(open(image).read())
+		resp = make_response(open(image).read())
 		resp.content_type = 'image/png'
 		return resp
 
 	except:
-		return flask.redirect('/error/noImageFound')
+		return redirect('/error/noImageFound')
 
 @app.route('/error/<typeE>', methods = ['GET', 'POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
-
 def error(typeE):
 	data = {}
 	data['error'] = typeE
-	return flask.jsonify(data)
+	return jsonify(data)
+
+@app.route('/date', methods = ['POST'])
+@cross_origin(origin='*', headers=['Content-Type','Authorization'])
+def date():
+	if request.is_json:
+		data = request.get_json()
+
+		if not manager.rrdFile(data['date']):
+			return redirect('/error/InvalideDate')
+		else:
+			return jsonify({'status':True})
+
+	else:
+		return redirect('/error/format')
 
 if __name__ == '__main__':
 	manager = ManagerSNMP()
