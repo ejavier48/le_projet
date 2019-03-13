@@ -25,6 +25,23 @@ export class HomePage {
     this.FlaskService.pausarInteravalo1=true;
   }
 
+  send(){
+    console.log( "ready!" );
+    alert("he");
+    Email.send("zildjianremo@gmail.com",
+    "zildjianremo@gmail.com",
+    "SNMP Notificacion de cambio de estado",
+    "texto",
+    "smtp25.elasticemail.com",
+    "zildjianremo@gmail.com",
+    "cd26d587-db2c-48f2-9d9d-6da0cc766915",
+    function done(message) {
+      alert(message)
+   });
+  }
+
+
+
   irAConsulta(){
     if(this.ipAdd=="" || this.port==""){
       console.log(this.ipAdd);

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1_1_" x="0px" y="0px" viewBox="0 0 64 64" style="enable-background:new 0 0 64 64;" xml:space="preserve" width="512px" height="512px" class=""><g><g>
+	<path d="M30,23H10v6h20V23z M28,27H12v-2h16V27z" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="3" y="43" width="2" height="2" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="7" y="43" width="15" height="2" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="36" y="23" width="2" height="14" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="28" y="43" width="29" height="2" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<path d="M60,25h1v-6H3v6h1c1.103,0,2,0.897,2,2v2c0,1.103-0.897,2-2,2H3v2h1c1.103,0,2,0.897,2,2v2c0,1.103-0.897,2-2,2H3v2h19.184   c0.414-1.161,1.514-2,2.816-2s2.402,0.839,2.816,2H61v-2h-1c-1.103,0-2-0.897-2-2v-2c0-1.103,0.897-2,2-2h1v-2h-1   c-1.103,0-2-0.897-2-2v-2C58,25.897,58.897,25,60,25z M12,39H8v-2h4V39z M12,35H8v-2h4V35z M18,39h-4v-2h4V39z M18,35h-4v-2h4V35z    M24,35h-4v-2h4V35z M30,35h-4v-2h4V35z M32,31H8V21h24V31z M40,39h-6V21h6V39z M48,39h-6V21h6V39z M56,39h-6V21h6V39z" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="52" y="23" width="2" height="14" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="59" y="43" width="2" height="2" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+	<rect x="44" y="23" width="2" height="14" data-original="#000000" class="active-path" data-old_color="#3880ff" fill="#3880ff"/>
+</g></g> </svg>

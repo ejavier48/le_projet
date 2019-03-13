@@ -1,0 +1,138 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button  (click)="volver()"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Limites de monitoreo</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+
+
+
+  <ion-grid>
+    <ion-row>
+      <ion-col>
+        <ion-text color="primary" text-center>
+          <h3>Limites de memoria RAM</h3>
+        </ion-text>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+<ion-grid>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="5">
+            <img src="../../assets/img/ram.svg" >
+        </ion-col>
+        <ion-col>
+          <ion-list>
+            <ion-item>
+               <ion-label position="fixed">Ready</ion-label>
+              <ion-input [(ngModel)]="RAM[0]" ></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="fixed">Set</ion-label>
+              <ion-input [(ngModel)]="RAM[1]" ></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-label position="fixed">Go</ion-label>
+              <ion-input [(ngModel)]="RAM[2]" ></ion-input>
+            </ion-item>
+          </ion-list>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+</ion-grid>
+
+<ion-grid>
+  <ion-row>
+    <ion-col>
+      <ion-text color="primary" text-center>
+        <h3>Limites de memoria HDD</h3>
+      </ion-text>
+    </ion-col>
+  </ion-row>
+</ion-grid>
+<ion-grid>
+  <ion-grid>
+    <ion-row>
+      <ion-col size="4">
+          <img src="../../assets/img/hdd.svg" >
+      </ion-col>
+      <ion-col>
+        <ion-list>
+          <ion-item>
+            <ion-label position="fixed">Ready</ion-label>
+            <ion-input [(ngModel)]="HDD[0]"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-label position="fixed">Set</ion-label>
+            <ion-input [(ngModel)]="HDD[1]" ></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-label position="fixed">Go</ion-label>
+            <ion-input [(ngModel)]="HDD[2]"></ion-input>
+          </ion-item>
+        </ion-list>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-grid>
+
+<ion-grid>
+  <ion-row>
+    <ion-col>
+      <ion-text color="primary" text-center>
+        <h3>Limites de CPU</h3>
+      </ion-text>
+    </ion-col>
+  </ion-row>
+</ion-grid>
+<ion-grid>
+  <ion-grid>
+    <ion-row>
+      <ion-col size="4">
+          <img src="../../assets/img/cpu.svg" >
+      </ion-col>
+      <ion-col>
+        <ion-list>
+          <ion-item>
+            <ion-label position="fixed">Ready</ion-label>
+            <ion-input [(ngModel)]="CPU[0]"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-label position="fixed">Set</ion-label>
+            <ion-input [(ngModel)]="CPU[1]"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-label position="fixed">Go</ion-label>
+            <ion-input [(ngModel)]="CPU[2]"></ion-input>
+          </ion-item>
+        </ion-list>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <div *ngIf="mostrarMensajeError">
+    <br>
+    <ion-text color="danger">
+      <h4 >Error, alguno de los datos no ha sido proporcionado</h4>
+    </ion-text>
+    <p color="danger"></p>
+  </div>
+
+  <ion-row>
+
+    <ion-col size="4" offset="4">
+      <ion-button (click)="guardarLims()">
+        Guardar
+        <ion-icon slot="end" name="save" color="light" ></ion-icon>
+      </ion-button>
+    </ion-col>
+  </ion-row>
+</ion-grid>
+
+
+</ion-content>

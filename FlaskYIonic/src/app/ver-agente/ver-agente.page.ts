@@ -38,6 +38,7 @@ export class VerAgentePage implements OnInit {
   index : number = 0;
   tiempo;
   intervalo;
+  hayLimites;
   constructor(private FlaskService: MensajeroFlaskService,
      private loadcont: LoadingController,
      private activatedRoute: ActivatedRoute,
@@ -49,6 +50,7 @@ export class VerAgentePage implements OnInit {
     this.indice = this.activatedRoute.snapshot.paramMap.get('indice');
     this.ipAdd=this.FlaskService.ipAdd;
     this.puerto=this.FlaskService.puerto;
+
   }
 
   volver(){
@@ -66,6 +68,16 @@ export class VerAgentePage implements OnInit {
      return await modal.present();
   }
 
+abrirPageLimites(){
+  clearInterval(this.intervalo);
+  this.router.navigate(['/limites',this.indice,false]);
+}
+
+abrirPageConsulta(){
+  clearInterval(this.intervalo);
+  this.router.navigate(['/limites',this.indice,true]);
+}
+
 agregaTimeStamp(){
   this.imagenip+="?"+  Math.random().toString(36).substr(2, 9);
   this.imagenudp+="?"+  Math.random().toString(36).substr(2, 9);
@@ -77,6 +89,7 @@ agregaTimeStamp(){
 
 
   ionViewWillEnter(){
+      this.hayLimites = this.FlaskService.hayLimites;
       this.getData()
       this.intervalo = setInterval(()=> {
         this.imagenip = this.imagenesip[this.index];
@@ -130,6 +143,8 @@ agregaTimeStamp(){
       .subscribe(res => {
         this.agente.push(res.devices[this.indice]);
           //console.log("data obtenida "+JSON.stringify(data));
+
+
         console.log(JSON.stringify(this.agente))
         this.FlaskService.generateImages(res.devices[this.indice]._hostName);
 
@@ -146,6 +161,8 @@ agregaTimeStamp(){
 
       });
   }
+
+
 
   async presentAlert(mensaje:string) {
 

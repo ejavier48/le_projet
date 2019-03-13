@@ -27,6 +27,8 @@ export class MensajeroFlaskService {
   agenteConsultado:any;
   pausarInteravalo1:boolean;
   hayInfoAdmin:boolean;
+  hayLimites:boolean;
+  intervalo;
   infoAdmin={
     nombre: "",
     email:"",
@@ -35,6 +37,7 @@ export class MensajeroFlaskService {
 
   constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router, private storage: Storage, private platform: Platform, private toastc:ToastController) {
     this.pausarInteravalo1=false;
+    this.hayLimites=false;
 
     this.cargar_storage();
     if(this.infoAdmin.nombre==""){
@@ -43,13 +46,78 @@ export class MensajeroFlaskService {
     else{
       this.hayInfoAdmin=true;
     }
+    this.intervalo = setInterval(()=>{
+          if(this.hayLimites){
+            this.preguntarPorAlerta();
+          }
+        },5000);
+
   }
+
+preguntarPorAlerta(){
+  this.http2.post('http://'+this.ipAdd+':'+this.puerto+'/notify',{}).subscribe(res => {
+          console.log(res);
+          if(Object.keys(res).length==0){
+            console.log("no hay mensaje :)")
+          }
+          else{
+
+            let texto="Estimado administrador de red, los siguientes dispositivos requieren su atencion \n"
+
+            for(let i=0; i<Object.keys(res).length; i++ ){
+              texto+="Host: "+res[i]._hostname+" \n"
+              texto+="Recurso  "+res[i]._resource+" \n"
+              texto+="Medicion  "+res[i]._measure+" \n"
+              texto+="Limite  "+res[i]._limit+" \n"
+             texto+="Accion planeada:  "+res[i]._label+" \n"
+              texto+=" \n\n "
+            }
+            Email.send("zildjianremo@gmail.com",
+            "zildjianremo@gmail.com",
+            "SNMP Notificacion de cambio de estado",
+            texto,
+            "smtp25.elasticemail.com",
+            "zildjianremo@gmail.com",
+            "cd26d587-db2c-48f2-9d9d-6da0cc766915",
+            function done(message) {
+              alert(message)
+           }
+         );
+
+
+         //console.log(texto)
+          }
+
+          /*if(JSON.stringify(res).includes("error")){
+            this.presentAlert("Oops!","Parece que hubo un error al agregar el agente :c");
+              //this.deleteAgent(ipAdd,0);
+          }
+          else{
+            this.presentAlert("Perfecto!","Agente dado de alta con exito");
+          }*/
+
+        },
+        err => {
+          console.log("Error occured "+err);
+
+
+        });
+}
 
 getData(ipAdd:string, port:string):Observable<any>{
     this.ipAdd=ipAdd;
     this.puerto=port;
     let response1 = this.http2.get('http://'+ipAdd+':'+port+'/');
     console.log(JSON.stringify(response1.source.source.source));
+    //console.log("respuesta "+JSON.stringify(response1.source.source.source.value.body));
+    return (response1);
+}
+
+getLimits():Observable<any>{
+
+    let response1 = this.http2.get('http://'+this.ipAdd+':'+this.puerto+'/limits');
+    console.log(JSON.stringify(response1.source.source.source));
+    console.log(response1)
     //console.log("respuesta "+JSON.stringify(response1.source.source.source.value.body));
     return (response1);
 }
@@ -95,6 +163,51 @@ async  cargar_storage(){
     this.hayInfoAdmin=true;
   }
 
+async setLimits(RAM:string[], CPU:string[], HDD:string[] ){
+  const loading = await this.loadcont.create({
+    message: 'Configurando limites'
+  });
+
+  await loading.present();
+
+  let postData = {"RAM" :{
+                	"Ready": RAM[0],
+                	"Set": RAM[1],
+                	"Go": RAM[2]
+                },
+                "CPU" :{
+                	"Ready": CPU[0],
+                	"Set": CPU[1],
+                	"Go": CPU[2]
+                },
+                "HDD" :{
+                	"Ready": HDD[0],
+                	"Set": HDD[1],
+                	"Go": HDD[2]
+                }
+              }
+
+  this.http2.post('http://'+this.ipAdd+':'+this.puerto+'/limits',postData).subscribe(res => {
+          console.log(res);
+          loading.dismiss();
+          if(JSON.stringify(res).includes("error")){
+            this.presentAlert("Oops!","No pudimos guardar los limites :c");
+              //this.deleteAgent(ipAdd,0);
+          }
+          else{
+            this.notifyAlert("Perfecto!","Los limites se han guardado");
+            this.hayLimites=true;
+          }
+
+        },
+        err => {
+          console.log("Error occured "+err);
+          loading.dismiss();
+          this.notifyAlert("Oops!",err);
+        });
+
+}
+
 async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
   const loading = await this.loadcont.create({
     message: 'Agregando'
@@ -113,7 +226,7 @@ async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
           loading.dismiss();
           if(JSON.stringify(res).includes("error")){
             this.presentAlert("Oops!","Parece que hubo un error al agregar el agente :c");
-              this.deleteAgent(ipAdd,0);
+              //this.deleteAgent(ipAdd,0);
           }
           else{
             this.presentAlert("Perfecto!","Agente dado de alta con exito");
@@ -165,6 +278,21 @@ async presentToast(mensaje:string) {
     });
     toast.present();
   }
+
+  async notifyAlert(titulo:string,mensaje:string) {
+     const alert = await this.alertC.create({
+       header: titulo,
+       message: mensaje,
+       buttons: [{
+         text:'OK',
+         handler: () => {
+             console.log('Confirm Okay');
+           }
+       }]
+     });
+
+     await alert.present();
+   }
 
 async presentAlert(titulo:string,mensaje:string) {
    const alert = await this.alertC.create({

@@ -7,6 +7,7 @@ const routes: Routes = [
   //{ path: 'consulta/:ipAdd/:port', loadChildren: './consulta/consulta.module#ConsultaPageModule' },
   { path: 'menu/:ipAdd/:port', loadChildren: './menu/menu.module#MenuPageModule' },
   { path: 'ver-agente/:indice', loadChildren: './ver-agente/ver-agente.module#VerAgentePageModule' },
+  { path: 'limites/:indice/:esConsulta', loadChildren: './limites/limites.module#LimitesPageModule' },
   //{ path: 'administrador', loadChildren: './administrador/administrador.module#AdministradorPageModule' },
   //{ path: 'modal-interfaces', loadChildren: './modal-interfaces/modal-interfaces.module#ModalInterfacesPageModule' }
 
@@ -16,4 +17,4 @@ const routes: Routes = [
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule]
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

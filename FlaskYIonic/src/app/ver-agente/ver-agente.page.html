@@ -17,14 +17,17 @@
       <ion-row>
         <ion-col size="3">
           <br><br>
-            <img src="../../assets/img/windows.svg">
+          <img src="../../assets/img/windows.svg" *ngIf="agent['_info'].includes('Windows') || agent['_info'].includes('windows') "/>
+          <img src="../../assets/img/linux.svg" *ngIf="agent['_info'].includes('Linux') || agent['_info'].includes('linux') || agent['_info'].includes('Debian') || agent['_info'].includes('debian') || agent['_info'].includes('Ubuntu') || agent['_info'].includes('ubuntu')"/>
+          <img src="../../assets/img/mac.svg" *ngIf="agent['_info'].includes('Apple') || agent['_info'].includes('apple')"/>
+
         </ion-col>
         <ion-col size="1"></ion-col>
         <ion-col size="8">
           <h3>{{agent['_node']}}</h3>
           <p>{{agent['_hostName']}}</p>
           <ion-note>
-            Version del SO: {{agent['_os']}}
+            Version del SO: <b>{{agente[0]['_info']}}</b>
           </ion-note>
         </ion-col>
       </ion-row>
@@ -35,6 +38,7 @@
     <p>Ubicacion geografica: {{agent['_localization']}}</p>
     <p>Datos de contacto: {{agent['_contact']}}</p>
   </ion-card-content>
+
 
   <ion-row>
     <ion-col text-center>
@@ -49,6 +53,16 @@
     </ion-col>
 
   </ion-row>
+
+  <ion-text color="primary" text-center>
+    <h3>Recursos del agente</h3>
+  </ion-text>
+  <div *ngIf="!hayLimites">
+  <ion-button expand="block" (click)="abrirPageLimites()">Fijar limites</ion-button>
+  </div>
+  <div *ngIf="hayLimites">
+  <ion-button expand="block" (click)="abrirPageConsulta()">Consultar limites</ion-button>
+  </div>
 
   <ion-text color="primary" text-center>
     <h3>Protocolos</h3>
