@@ -28,6 +28,7 @@ export class MensajeroFlaskService {
   pausarInteravalo1:boolean;
   hayInfoAdmin:boolean;
   hayLimites:boolean;
+  muestroPredicciones:boolean;
   intervalo;
   infoAdmin={
     nombre: "",
@@ -38,6 +39,7 @@ export class MensajeroFlaskService {
   constructor( private http2: HttpClient, private alertC: AlertController,private loadcont: LoadingController,private router: Router, private storage: Storage, private platform: Platform, private toastc:ToastController) {
     this.pausarInteravalo1=false;
     this.hayLimites=false;
+    this.muestroPredicciones = false;
 
     this.cargar_storage();
     if(this.infoAdmin.nombre==""){
@@ -206,6 +208,37 @@ async setLimits(RAM:string[], CPU:string[], HDD:string[] ){
           this.notifyAlert("Oops!",err);
         });
 
+}
+
+async generatePrediction(nombre:string, fecha:string, indice:string){
+  const loading = await this.loadcont.create({
+    message: 'Generando grafica'
+  });
+  await loading.present();
+  let postData = {
+            "date": fecha
+    }
+    this.http2.post('http://'+this.ipAdd+':'+this.puerto+'/date',postData).subscribe(res => {
+            console.log(res);
+            loading.dismiss();
+            if(JSON.stringify(res).includes("error")){
+              this.notifyAlert("Oops!","Parece que hubo un error al agregar crear la grafica :c");
+                //this.deleteAgent(ipAdd,0);
+                this.muestroPredicciones = true;
+                this.router.navigate(['/prediccion',indice]);
+
+            }
+            else{
+              this.notifyAlert("Perfecto!","Grafica generada con exito");
+
+            }
+
+          },
+          err => {
+            console.log("Error occured "+JSON.stringify(err));
+            loading.dismiss();
+            this.notifyAlert("Oops!",err);
+          });
 }
 
 async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){

@@ -1,0 +1,36 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button  (click)="volver()"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Predicciones de desempeño </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <ion-text color="primary" text-center>
+    <h3>Datos del historial</h3>
+  </ion-text>
+  <ion-item>
+    <ion-input placeholder="Nombre del archivo" [(ngModel)]="nombre"></ion-input>
+  </ion-item>
+  <ion-item>
+  <ion-label>Fecha de inicio </ion-label>
+  <ion-datetime display-format="YYYY-MM-DD HH:mm:ss" picker-format="YYYY-MM-DDTHH:mm:ssTZD	" placeholder="YYYY-mm-dd H:M:S" [(ngModel)]="fecha"></ion-datetime>
+
+  </ion-item>
+
+  <div *ngIf="mostrarImagen">
+    <img src="../../assets/img/network.svg" alt="">
+  </div>
+
+  <br>
+  <ion-button expand="block" (click)="generarGrafica()"> Generar gráfica </ion-button>
+  <div *ngIf="mostrarMensajeError">
+    <br>
+    <ion-text color="danger">
+      <h4 >Error, alguno de los datos no ha sido proporcionado</h4>
+    </ion-text>
+    <p color="danger"></p>
+  </div>
+</ion-content>

@@ -30,11 +30,15 @@ export class VerAgentePage implements OnInit {
   imagenip : string = '';
   imagenicmp : string = '';
   imagentcp : string = '';
+  imagencpu : string = '';
+  imagenram : string = '';
   imagenudp : string = '';
   imagenesip :string[] = ['', ''];
   imagenesicmp :string[] = ['', ''];
   imagenestcp :string[] = ['', ''];
   imagenesudp :string[] = ['', ''];
+  imagenescpu: string[] = ['',''];
+  imagenesram: string[] = ['',''];
   index : number = 0;
   tiempo;
   intervalo;
@@ -73,6 +77,12 @@ abrirPageLimites(){
   this.router.navigate(['/limites',this.indice,false]);
 }
 
+abrirPagePrediccion(){
+  clearInterval(this.intervalo);
+  this.router.navigate(['/prediccion',this.indice]);
+}
+
+
 abrirPageConsulta(){
   clearInterval(this.intervalo);
   this.router.navigate(['/limites',this.indice,true]);
@@ -83,6 +93,8 @@ agregaTimeStamp(){
   this.imagenudp+="?"+  Math.random().toString(36).substr(2, 9);
   this.imagentcp+="?"+ Math.random().toString(36).substr(2, 9);
   this.imagenicmp+="?"+  Math.random().toString(36).substr(2, 9);
+  this.imagencpu+="?"+  Math.random().toString(36).substr(2, 9);
+  this.imagenram+="?"+  Math.random().toString(36).substr(2, 9);
 
   console.log(this.imagentcp);
 }
@@ -96,6 +108,8 @@ agregaTimeStamp(){
         this.imagentcp = this.imagenestcp[this.index];
         this.imagenudp = this.imagenesudp[this.index];
         this.imagenicmp = this.imagenesicmp[this.index];
+        this.imagencpu = this.imagenescpu[this.index];
+        this.imagenram = this.imagenesram[this.index];
         this.index++;
         this.agregaTimeStamp()
 
@@ -130,6 +144,12 @@ agregaTimeStamp(){
     this.imagenicmp="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/icmp";
     this.imagenesicmp[0]=this.imagenicmp;
     this.imagenesicmp[1]=this.imagenicmp;
+    this.imagencpu="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/cpu0";
+    this.imagenescpu[0]=this.imagencpu;
+    this.imagenescpu[1]=this.imagencpu;
+    this.imagenram="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/ram";
+    this.imagenesram[0]=this.imagenram;
+    this.imagenesram[1]=this.imagenram;
   }
 
   async getData(){
