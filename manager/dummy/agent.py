@@ -9,6 +9,8 @@ class Agent():
 		self._community = community
 		self._status = None
 		self._time =  int(time())
+		self._numInterFs = 0
+		self._interfaces = []
 
 	def setTime(self, cTime):
 		self._time = cTime
@@ -29,11 +31,7 @@ class Agent():
 		self._status = status
 
 	def setInfo(self, info):
-		info = info.split(' ')
-		self._type = info[0]
-		self._os = info[5]
-		self._date = info[7]
-		self._bits = info[8]
+		self._info = info
 
 	def setContact(self, contact):
 		self._contact = contact
@@ -64,6 +62,18 @@ class Agent():
 		self._upTimeR = upTime
 		self._upTimeF = '({}) {} day {}:{}:{}.{}'.format(upTime, days, hrs, mins, segs, ms)
 
+	def setRAMSize(self, ramSize):
+		self._ramSize = ramSize
+
+	def setRAMUse(self, ramUse):
+		self._ramUse = ramUse
+
+	def setNumCPUs(self, numCPUs):
+		self._numCPUs = numCPUs
+
+	def setCPUsUse(self, cpusUse):
+		self._cpusUse = cpusUse
+
 	def getTime(self):
 		return self._time
 		
@@ -89,7 +99,7 @@ class Agent():
 		return self._upTimeF
 
 	def getInfo(self):
-		return "{} {} {} {}".format(self._type, self._os, self._bits, self._date)
+		return self._info#"{} {} {} {}".format(self._type, self._os, self._bits, self._date)
 
 	def getContact(self):
 		return self._contact
@@ -106,5 +116,18 @@ class Agent():
 	def getInterfaces(self):
 		return self._interfaces
 
+	def getRAMSize(self):
+		return self._ramSize
+
+	def getRAMUse(self):
+		return self._ramUse
+
+	def getNumCPUs(self):
+		return self._numCPUs
+
+	def getCPUsUse(self):
+		return self._cpusUse
+
 	def getDict(self):
+		self._numInterFs = len(self._interfaces)
 		return self.__dict__
