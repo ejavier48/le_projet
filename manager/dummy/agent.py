@@ -1,6 +1,9 @@
 from time import time
+import re
 
 class Agent():
+
+	_rex = 'LINUX|linux|Linux'
 
 	def __init__(self, hostName, version, port, community):
 		self._hostName = hostName
@@ -31,6 +34,7 @@ class Agent():
 		self._status = status
 
 	def setInfo(self, info):
+		self._os = 'linux' if re.search(self._rex, info) else 'win'
 		self._info = info
 
 	def setContact(self, contact):
