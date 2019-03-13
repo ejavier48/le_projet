@@ -700,7 +700,7 @@ class ManagerSNMP():
 
 						graph = [nImg,
 							'--start', str(self._agents[hostname].getTime()),
-							'--vertical-label=CPU ' + str(i) ' Load',
+							'--vertical-label=CPU ' + str(i) + ' Load',
 							'--title=CPU Use',
 							'--color', 'ARROW#009900',
 							'--vertical-label', 'CPU Use(%)',
