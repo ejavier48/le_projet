@@ -240,7 +240,7 @@ class ManagerSNMP():
 			img = MIMEImage(fp.read(), )
 			fp.close()
 			msg.attach(img)
-			msg.attach(MIMEText(str(noti.getReport), 'plain'))
+			msg.attach(MIMEText(str(noti.getReport()), 'plain'))
 			mserver = smtplib.SMTP(mailserver)
 			mserver.starttls()
 			# Login Credentials for sending the mail
