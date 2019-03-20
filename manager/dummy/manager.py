@@ -15,8 +15,18 @@ from datetime import datetime
 
 from threading import Thread
 
+#smtp
+import smtplib
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import rrdtool
+
+mailsender = "ejsanchezg96@gmail.com"
+mailreceip = "ejsanchezg96@gmail.com"
+mailserver = 'smtp.gmail.com: 587'
+password = ''#add password
 
 class ManagerSNMP():
 	_querys = {
@@ -72,6 +82,7 @@ class ManagerSNMP():
 		'hdd',
 	]
 
+
 	"""
 		_limits = {
 			'RAM' : {
@@ -107,6 +118,7 @@ class ManagerSNMP():
 		self._numAgents = 0
 		self._agents = {}
 		self._limits = {'RAM': None, 'CPU': None, 'HDD': None, 'Time':300}
+		self._labels = ['Ready', 'Set', 'Go']
 
 		self._new = []
 		self._newNotification = []
@@ -213,6 +225,31 @@ class ManagerSNMP():
 		else:#xcept:
 			print 'error getNumCPUs'
 
+	def _sendMail(self, noti):
+		try:
+			print 'Notification'
+			if noti.getLabel() != 'Go':
+				print 'Not Go'
+				return
+			imgPath = noti.getFile()
+			msg = MIMEMultipart()
+			msg['Subject'] = ' '.join([noti.getResource(), 'Surpassed Limit', noti.getLabel()])
+			msg['From'] = mailsender
+			msg['To'] = mailreceip
+			fp = open( imgPath, 'rb')
+			img = MIMEImage(fp.read(), )
+			fp.close()
+			msg.attach(img)
+			msg.attach(MIMEText(str(noti.getReport), 'plain'))
+			mserver = smtplib.SMTP(mailserver)
+			mserver.starttls()
+			# Login Credentials for sending the mail
+			mserver.login(mailsender, password)
+			mserver.sendmail(mailsender, mailreceip, msg.as_string())
+			mserver.quit()
+		except:
+			print 'Error'
+
 	def _getCPUsUse(self, hostname):
 
 		if not hostname in self._agents:
@@ -263,7 +300,7 @@ class ManagerSNMP():
 
 						label = None
 
-						for limit in self._limits['CPU']:
+						for limit in self._labels:
 							valLimit = self._limits['CPU'][limit]
 							if valLimit < cpusUse[i]:
 								label = limit
@@ -271,20 +308,22 @@ class ManagerSNMP():
 
 						if label is not None:
 
-							noti = Notification(hostname, 'CPU ' + str(i+1), label, self._limits['CPU'][label], cpusUse[i])
+							noti = Notification(hostname, 'CPU ' + str(i+1), label, self._limits['CPU'][label], cpusUse[i], self._fname[fn].format(hostname, i, 'png'))
 							
 							if not i in self._notifications[hostname]['CPU']:
 								self._notifications[hostname]['CPU'][i] = []
 								self._notifications[hostname]['CPU'][i].append(noti)
 								self._newNotification.append(noti.getReport())
+								self._sendMail(noti)
 
 							else:
 								last = self._notifications[hostname]['CPU'][i][-1]
 								diff = noti.getTimeReport() - last.getTimeReport()
 
-								if self._limits['Time'] < diff or last.getLabel() != noti.getLabel():
+								if self._limits['Time'] < diff :#or last.getLabel() != noti.getLabel():
 									self._notifications[hostname]['CPU'][i].append(noti)
 									self._newNotification.append(noti.getReport())	
+									self._sendMail(noti)
 
 			self._agents[hostname].setCPUsUse(cpusUse)
 
@@ -417,7 +456,7 @@ class ManagerSNMP():
 
 						label = None
 
-						for limit in self._limits['RAM']:
+						for limit in self._labels:
 							
 							valLimit = self._agents[hostname].getRAMSize() * self._limits['RAM'][limit]
 
@@ -426,7 +465,7 @@ class ManagerSNMP():
 
 						if label is not None:
 													
-							noti = Notification(hostname, 'RAM', label, self._limits['RAM'][label], self._agents[hostname].getRAMUse())
+							noti = Notification(hostname, 'RAM', label, self._limits['RAM'][label], self._agents[hostname].getRAMUse(), self._fname[fn].format(hostname, 'png'))
 							flag = True
 
 							if 0 < len(self._notifications[hostname]['RAM']):
@@ -434,12 +473,14 @@ class ManagerSNMP():
 								last = self._notifications[hostname]['RAM'][-1]
 								diff = noti.getTimeReport() - last.getTimeReport()
 
-								if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
+								if  diff < self._limits['Time'] :#and last.getLabel() == noti.getLabel():
 									flag = False
 
 							if flag:
+								print 'new ram'
 								self._notifications[hostname]['RAM'].append(noti)
 								self._newNotification.append(noti.getReport())
+								self._sendMail(noti)
 						
 					else:
 						print 'error'
@@ -503,7 +544,7 @@ class ManagerSNMP():
 
 						label = None
 
-						for limit in self._limits['HDD']:
+						for limit in self._labels:
 							
 							valLimit = self._agents[hostname].getHDDSize() * self._limits['HDD'][limit]
 
@@ -512,7 +553,7 @@ class ManagerSNMP():
 
 						if label is not None:
 													
-							noti = Notification(hostname, 'HDD', label, self._limits['HDD'][label], self._agents[hostname].getHDDUse())
+							noti = Notification(hostname, 'HDD', label, self._limits['HDD'][label], self._agents[hostname].getHDDUse(), self._fname[fn].format(hostname, 'png'))
 							flag = True
 
 							if 0 < len(self._notifications[hostname]['HDD']):
@@ -520,18 +561,19 @@ class ManagerSNMP():
 								last = self._notifications[hostname]['HDD'][-1]
 								diff = noti.getTimeReport() - last.getTimeReport()
 
-								if  diff < self._limits['Time'] and last.getLabel() == noti.getLabel():
+								if  diff < self._limits['Time']:# and last.getLabel() == noti.getLabel():
 									flag = False
 
 							if flag:
 								self._notifications[hostname]['HDD'].append(noti)
 								self._newNotification.append(noti.getReport())
+								self._sendMail(noti)
 
 					else:
 						print 'error HDD', i
 					i += 1
 
-		except KeyError:
+		except:
 			print 'Exception _getAgentHDDLin'
 
 	def _createRRD(self, hostname):
@@ -616,6 +658,7 @@ class ManagerSNMP():
 		upImgs = 0
 
 		while(1):
+			print 'update'
 			
 			upImgs+= 1
 
@@ -842,9 +885,9 @@ class ManagerSNMP():
 							'AREA:umbral'+str(sVal)+'#DD4E03:CPU Load greater than ' + str(sVal) + '%' if limit else None,
 							'AREA:umbral'+str(gVal)+'#730000:CPU Load greater than ' + str(gVal) + '%' if limit else None,
 
-							'HRULE:'+str(rVal)+'#F6D911:Umbral ' + str(1) + ' - ' + str(rVal) + '%' if limit else None,
-							'HRULE:'+str(sVal)+'#FF5800:Umbral ' + str(rVal) + ' - ' + str(sVal) + '%' if limit else None,
-							'HRULE:'+str(gVal)+'#FF0000:Umbral ' + str(sVal) + ' - ' + str(gVal) + '%' if limit else None,
+							'HRULE:'+str(rVal)+'#F6D911:Ready ' + str(1) + ' - ' + str(rVal) + '%' if limit else None,
+							'HRULE:'+str(sVal)+'#FF5800:Set ' + str(rVal) + ' - ' + str(sVal) + '%' if limit else None,
+							'HRULE:'+str(gVal)+'#FF0000:Go ' + str(sVal) + ' - ' + str(gVal) + '%' if limit else None,
 
 							'GPRINT:loadMAX:%6.2lf %SMAX',
 							'GPRINT:loadMIN:%6.2lf %SMIN',
@@ -855,11 +898,15 @@ class ManagerSNMP():
 							'CDEF:avg2=load,POP,a,COUNT,*,b,+',
 							'LINE2:avg2#FFBB00',
 							'COMMENT: \\n',
-							'CDEF:seg=avg2,40,60,LIMIT',
-							'VDEF:minseg=seg,FIRST',
-							'VDEF:maxseg=seg,LAST',
-							'GPRINT:minseg: Reach 40% @ %c \\n:strftime',
-							'GPRINT:maxseg: Reach 60% @ %c \\n:strftime',
+
+							'CDEF:segRS=avg2,' + str(rVal) + ',' + str(sVal) + ',LIMIT' if limit else None,
+							'CDEF:segSG=avg2,' + str(sVal) + ',' + str(gVal) + ',LIMIT' if limit else None,
+							'VDEF:rseg=segRS,FIRST' if limit else None,
+							'VDEF:sseg=segRS,LAST' if limit else None,
+							'VDEF:gseg=segSG,LAST' if limit else None,
+							'GPRINT:sseg: Reach Set '+ str(sVal) +'% @ %c \\n:strftime' if limit else None,
+							'GPRINT:rseg: Reach Ready '+ str(rVal) +'% @ %c \\n:strftime' if limit else None,
+							'GPRINT:gseg: Reach Go'+ str(gVal) +'% @ %c \\n:strftime' if limit else None,
 						]
 						graph = filter(None, graph)
 
@@ -1002,7 +1049,7 @@ class ManagerSNMP():
 		n = len(self._newNotification)
 		noti = self._newNotification[:n]
 
-		self._newNotification = self._newNotification[n:]
+		#self._newNotification = self._newNotification[n:]
 
 		return noti
 
@@ -1054,7 +1101,7 @@ class ManagerSNMP():
 
 	def _graphCheck(self, tQuery):
 		try:
-			nImg = './agents/linea_cpu0.png'
+			nImg = './agents/rrd_predict.png'
 			nRRD = './agents/lineal_cpu0.rrd'
 
 			graph = [nImg,

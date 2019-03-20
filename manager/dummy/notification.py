@@ -4,7 +4,7 @@ class Notification():
 
 	_STATUS = ['reported', 'in revision', 'diagnosted', 'solved']
 
-	def __init__(self, hostname, resource, label, limit, measure):
+	def __init__(self, hostname, resource, label, limit, measure, file):
 		self._hostname = hostname
 		self._resource = resource
 		self._label = label
@@ -13,6 +13,7 @@ class Notification():
 		self._status = 0
 		self._sLabel = self._STATUS[self._status]
 		self._comment = []
+		self._file = file
 		self._times = [time()]
 
 	def addComment(self, comment):
@@ -29,6 +30,15 @@ class Notification():
 
 	def getLabel(self):
 		return self._label
+
+	def getHostname(self):
+		return self._hostname
+
+	def getFile(self):
+		return self._file
+
+	def getResource(self):
+		return self._resource
 
 	def getReport(self):
 		return self.__dict__

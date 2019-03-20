@@ -14,6 +14,8 @@ class Agent():
 		self._time =  int(time())
 		self._numInterFs = 0
 		self._interfaces = []
+		self._hddUse = 0
+		self._hddSize = 0
 
 	def setTime(self, cTime):
 		self._time = cTime
