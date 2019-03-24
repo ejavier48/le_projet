@@ -42,3 +42,6 @@ class Notification():
 
 	def getReport(self):
 		return self.__dict__
+
+	def getHostName(self):
+		return self._hostname

@@ -26,7 +26,7 @@ import rrdtool
 mailsender = "ejsanchezg96@gmail.com"
 mailreceip = "ejsanchezg96@gmail.com"
 mailserver = 'smtp.gmail.com: 587'
-password = ''#add password
+password = 'android15'#add password
 
 class ManagerSNMP():
 	_querys = {
@@ -120,12 +120,14 @@ class ManagerSNMP():
 		self._limits = {'RAM': None, 'CPU': None, 'HDD': None, 'Time':300}
 		self._labels = ['Ready', 'Set', 'Go']
 
-		self._new = []
 		self._newNotification = []
 
+		self._threads = {}
+		'''
 		self._thread = Thread(target = self._updateRRD, args = ())
 		self._thread.daemon = True
 		self._thread.start()
+		'''
 
 	def _getBasicData(self, hostname):
 		try:
@@ -180,8 +182,6 @@ class ManagerSNMP():
 
 				self._agents[hostname].setStatus(True)
 
-				self._new.remove(hostname)
-
 				return True
 
 		except KeyError:
@@ -231,6 +231,8 @@ class ManagerSNMP():
 			if noti.getLabel() != 'Go':
 				print 'Not Go'
 				return
+			self._makegraphs(noti.getHostName())
+
 			imgPath = noti.getFile()
 			msg = MIMEMultipart()
 			msg['Subject'] = ' '.join([noti.getResource(), 'Surpassed Limit', noti.getLabel()])
@@ -238,6 +240,7 @@ class ManagerSNMP():
 			msg['To'] = mailreceip
 			fp = open( imgPath, 'rb')
 			img = MIMEImage(fp.read(), )
+			img.add_header('Content-Disposition', 'attachment; filename= %s' % noti.getResource())
 			fp.close()
 			msg.attach(img)
 			msg.attach(MIMEText(str(noti.getReport()), 'plain'))
@@ -247,7 +250,7 @@ class ManagerSNMP():
 			mserver.login(mailsender, password)
 			mserver.sendmail(mailsender, mailreceip, msg.as_string())
 			mserver.quit()
-		except:
+		except KeyError:
 			print 'Error'
 
 	def _getCPUsUse(self, hostname):
@@ -388,10 +391,10 @@ class ManagerSNMP():
 
 						elif data == 3:
 							
-							outData = int(a[1])
+							outData = int(a[1]) 
 							
 							nRRD = s.format(hostname, i, 'rrd')
-							value = ':'.join(['N', str(inData), str(outData)])
+							value = ':'.join(['N', str(inData)])#, str(outData)])
 							
 							ret = rrdtool.update(nRRD, value)
 
@@ -438,6 +441,11 @@ class ManagerSNMP():
 
 					if i == 0:
 						self._agents[hostname].setUpTime(int(a[1]))
+
+						if not self._agents[hostname].getStatus():
+							self._agents[hostname].setTime()
+							self._getBasicData(hostname)
+							print 'Changes Status'
 
 					elif i == 1:
 						self._agents[hostname].setRAMUse(int(a[1]))
@@ -510,7 +518,7 @@ class ManagerSNMP():
 					ObjectType(ObjectIdentity(self._querys['UCD'] + self._querys['HDDSize'])),
 					ObjectType(ObjectIdentity(self._querys['UCD'] + self._querys['HDDUse'])),)
 				)
-			
+
 			if eIndi:
 				print eIndi
 				#self._agents[hostname].setStatus(False)
@@ -578,7 +586,7 @@ class ManagerSNMP():
 
 	def _createRRD(self, hostname):
 
-		try:
+		if True:#try:
 			for fname in self._names:
 
 				s = self._fname[fname]
@@ -591,11 +599,16 @@ class ManagerSNMP():
 
 						ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '10',
+									'--step', '5',
 									'DS:in:COUNTER:600:0:U',
-									'DS:out:COUNTER:600:0:U',
-									'RRA:AVERAGE:0.5:2:80',
-									'RRA:AVERAGE:0.5:1:100')
+									'RRA:AVERAGE:0.5:1:500',
+									'RRA:HWPREDICT:250:0.1:0.0035:150:3',
+									'RRA:SEASONAL:150:0.1:2',
+									'RRA:DEVSEASONAL:150:0.1:2',
+									'RRA:DEVPREDICT:250:4',
+									'RRA:FAILURES:150:7:9:4')
+									#'DS:out:COUNTER:600:0:U',
+									#'RRA:AVERAGE:0.5:1:2000')
 
 						if ret:
 							print name, rrdtool.error()
@@ -605,7 +618,7 @@ class ManagerSNMP():
 					name = s.format(hostname, 'rrd')
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '10',
+									'--step', '5',
 									'DS:ram:GAUGE:600:0:U',
 									'RRA:AVERAGE:0.5:2:100')
 					if ret:
@@ -619,7 +632,7 @@ class ManagerSNMP():
 
 						ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '10',
+									'--step', '5',
 									'DS:load:GAUGE:600:0:100',
 									'RRA:AVERAGE:0.5:2:100')
 
@@ -631,7 +644,7 @@ class ManagerSNMP():
 					name = s.format(hostname, 'rrd')
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '10',
+									'--step', '5',
 									'DS:hdd:GAUGE:600:0:U',
 									'RRA:AVERAGE:0.5:2:100')
 					if ret:
@@ -642,7 +655,7 @@ class ManagerSNMP():
 
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '10',
+									'--step', '5',
 									'DS:in:COUNTER:600:0:U',
 									'DS:out:COUNTER:600:0:U',
 									'RRA:AVERAGE:0.5:2:80',
@@ -650,107 +663,94 @@ class ManagerSNMP():
 					if ret:
 						print name, rrdtool.error()	
 
-		except (KeyError, rrdtool.OperationalError) as e:
+		else:#except (KeyError, rrdtool.OperationalError) as e:
 			print 'Error'
 
-	def _updateRRD(self):
+	def _updateRRD(self, hostname):
 		
 		upImgs = 0
 
 		while(1):
-			print 'update'
-			
+
 			upImgs+= 1
-
-			hosts = self._agents.keys()
-			
-			for hostname in hosts:#get agent data
 				
-				try:
+			try:
 
-					if not hostname in self._agents: # check if agent was deleted
-						continue # if deleted go next
+				if not hostname in self._agents: # check if agent was deleted
+					break # if deleted go next
 
-					if hostname in self._new:
-						continue
-
-					self._getAgentData(hostname) #update time up
-
-					#print 'status update', self._agents[hostname].getStatus()
-
-					if not self._agents[hostname].getStatus(): #if agent is not active, go to next
-						continue
-
-					self._getCPUsUse(hostname)
-
-					self._getAgentInterFs(hostname)
-
-					eIndi, eStatus, eIndex, vBinds = next(
-						getCmd(SnmpEngine(),
-							CommunityData(self._agents[hostname].getCommunity()), 
-							UdpTransportTarget((hostname, self._agents[hostname].getPort())),
-							ContextData(),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
-							ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])))
-					)
-
-					if eIndi:
-						print eIndi
-
-					elif eStatus:
-						print eIndex, eStatus
-
-					else:
-
-						i = 0
-						inData = ''
-						outData = ''
-
-						for varBind in vBinds:
-							a = [x.prettyPrint() for x in varBind]
-							if not i&1:
-								inData = str(a[1])
-
-							else:
-
-								outData = str(a[1])
-								value = ':'.join(['N', inData, outData])
-
-								fn = self._names[(i/2)]
-								nRRD = self._fname[fn].format(hostname, 'rrd')
-
-								#Prevent exception if agents and files were deleted
-								if True:#try:
-									ret = rrdtool.update(nRRD, value) 
-
-								else:#except:
-									print 'problem update for in out'
-									break
-							i += 1
-
-						if upImgs == 4:
-							self._makegraphs(hostname)
+				self._getAgentData(hostname) #update time up
 
 
-
-				except (KeyError) as e: #Preventing exception if agent is deleted while working on it
-					print 'problem update'
+				if not self._agents[hostname].getStatus(): #if agent is not active, go to next
 					continue
 
-				except rrdtool.OperationalError:
-					print 'lallaa'
-					continue
+				self._getCPUsUse(hostname)
 
-			if upImgs == 4:
-				upImgs = 0
+				self._getAgentInterFs(hostname)
 
-			sleep(1)
+				eIndi, eStatus, eIndex, vBinds = next(
+					getCmd(SnmpEngine(),
+						CommunityData(self._agents[hostname].getCommunity()), 
+						UdpTransportTarget((hostname, self._agents[hostname].getPort())),
+						ContextData(),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InIP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutIP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InICMP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutICMP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InTCP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutTCP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['InUDP'])),
+						ObjectType(ObjectIdentity(self._querys['MIB'] + self._querys['OutUDP'])))
+				)
+
+				if eIndi:
+					print eIndi
+
+				elif eStatus:
+					print eIndex, eStatus
+
+				else:
+
+					i = 0
+					inData = ''
+					outData = ''
+
+					for varBind in vBinds:
+						a = [x.prettyPrint() for x in varBind]
+						if not i&1:
+							inData = str(a[1])
+
+						else:
+
+							outData = str(a[1])
+							value = ':'.join(['N', inData, outData])
+
+							fn = self._names[(i/2)]
+							nRRD = self._fname[fn].format(hostname, 'rrd')
+
+							#Prevent exception if agents and files were deleted
+							if True:#try:
+								ret = rrdtool.update(nRRD, value) 
+
+							else:#except:
+								print 'problem update for in out'
+								break
+						i += 1
+
+					if upImgs == 10:
+						self._makegraphs(hostname)
+						upImgs = 0
+
+			except (KeyError) as e: #Preventing exception if agent is deleted while working on it
+				print 'problem update'
+				continue
+
+			except rrdtool.OperationalError:
+				print 'lallaa ' + hostname
+				continue
+
+			sleep(.75)
 
 	def _makegraphs(self, hostname):
 
@@ -768,14 +768,29 @@ class ManagerSNMP():
 						name = self._fname[fname]
 						nImg = name.format(hostname, i, 'png')
 						nRRD = name.format(hostname, i, 'rrd')
-
-						ret = rrdtool.graph(nImg,
+						graph = [nImg,
 									'--start', str(self._agents[hostname].getTime()),
 									'--vertical-label=Bytes/s',
 									'DEF:in='+nRRD+':in:AVERAGE',
-									'DEF:out='+nRRD+':out:AVERAGE',
-									'LINE1:in#0F0F0F:In Traffic',
-									'LINE2:out#000FFF:Out Traffic')
+									#'DEF:out='+nRRD+':out:AVERAGE',
+									'DEF:pred='+nRRD+':in:HWPREDICT',
+									'DEF:dev='+nRRD+':in:DEVPREDICT',
+									'DEF:fail='+nRRD+':in:FAILURES',
+									'CDEF:sin=in,8,*',
+									#'CDEF:sout=out,8,*',
+									'CDEF:upper=pred,dev,2,*,+',
+									'CDEF:lower=pred,dev,2,*,-',
+									'CDEF:uscale=upper,8,*',
+									'CDEF:lscale=lower,8,*',
+									'CDEF:spred=pred,8,*',
+									'TICK:fail#FDD017:1.0:Failures',
+									'LINE3:sin#00FF00:In Traffic',
+									'LINE3:spred#FF00FF:Prediction',
+									'LINE1:uscale#FF0000:Upper Bound\n',
+									'LINE1:uscale#0000FF:Lower Bound']
+									#'LINE3:sout#000FFF:Out Traffic']
+						print graph
+						ret = rrdtool.graph(graph)
 
 				elif fname == self._names[5]:
 					#ram
@@ -900,12 +915,12 @@ class ManagerSNMP():
 							'COMMENT: \\n',
 
 							'CDEF:segRS=avg2,' + str(rVal) + ',' + str(sVal) + ',LIMIT' if limit else None,
-							'CDEF:segSG=avg2,' + str(sVal) + ',' + str(gVal) + ',LIMIT' if limit else None,
+							'CDEF:segSG=avg2,' + str(gVal) + ',100,LIMIT' if limit else None,
 							'VDEF:rseg=segRS,FIRST' if limit else None,
 							'VDEF:sseg=segRS,LAST' if limit else None,
-							'VDEF:gseg=segSG,LAST' if limit else None,
-							'GPRINT:sseg: Reach Set '+ str(sVal) +'% @ %c \\n:strftime' if limit else None,
+							'VDEF:gseg=segSG,FIRST' if limit else None,
 							'GPRINT:rseg: Reach Ready '+ str(rVal) +'% @ %c \\n:strftime' if limit else None,
+							'GPRINT:sseg: Reach Set '+ str(sVal) +'% @ %c \\n:strftime' if limit else None,
 							'GPRINT:gseg: Reach Go'+ str(gVal) +'% @ %c \\n:strftime' if limit else None,
 						]
 						graph = filter(None, graph)
@@ -976,6 +991,7 @@ class ManagerSNMP():
 
 					ret = rrdtool.graph(graph)
 					#hdd
+
 				else:
 
 					name = self._fname[fname]
@@ -1009,8 +1025,9 @@ class ManagerSNMP():
 		hostname = agent.getHostName()
 		if hostname in self._agents:
 			return True
+
 		self._numAgents += 1
-		self._new.append(hostname)
+
 		self._notifications[hostname] = {
 			'RAM': [],
 			'CPU': {},
@@ -1018,22 +1035,37 @@ class ManagerSNMP():
 		}
 		self._agents[hostname] = agent
 		self._agents[hostname].setStatus(False)
-		return self._getBasicData(hostname)
+		flag = self._getBasicData(hostname)
+
+		self._threads[hostname] = Thread(target = self._updateRRD, args = (hostname,))
+
+		self._threads[hostname].daemon = True
+		self._threads[hostname].start()
+
+		return flag
 
 	def delAgent(self, hostname):
 		try:
-
 			if not hostname in self._agents:
 				return True
 
 			self._agents[hostname].setStatus(False)
 			del self._agents[hostname]
 			del self._notifications[hostname]
+
+			if self._threads[hostname].is_alive():
+				self._threads[hostname].join()
+
+			del self._threads[hostname]
+
 			self._numAgents -= 1
+			
 			path = './agents/' + hostname + '*'
+			
 			files = glob(path)
 			for file in files:
 				remove(file)
+			
 			return True
 
 		except KeyError:

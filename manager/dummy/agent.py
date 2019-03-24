@@ -17,8 +17,8 @@ class Agent():
 		self._hddUse = 0
 		self._hddSize = 0
 
-	def setTime(self, cTime):
-		self._time = cTime
+	def setTime(self):
+		self._time = int(time())
 
 	def setHostName(self, hostName):
 		self._hostName = hostName
