@@ -12,13 +12,17 @@ class Agent():
 		self._community = community
 		self._status = None
 		self._time =  int(time())
-		self._numInterFs = 0
+		self._numInterFs = 1
+		self._numCPUs = 0
 		self._interfaces = []
 		self._hddUse = 0
 		self._hddSize = 0
 
 	def setTime(self):
 		self._time = int(time())
+
+	def sumTime(self, add):
+		self._time += add
 
 	def setHostName(self, hostName):
 		self._hostName = hostName
@@ -150,5 +154,4 @@ class Agent():
 		return self._os
 
 	def getDict(self):
-		self._numInterFs = len(self._interfaces)
 		return self.__dict__
