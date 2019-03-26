@@ -23,6 +23,15 @@ def home():
 
 	return jsonify(manager.getDict())
 
+@app.route('/admin', methods = ['POST'])
+@cross_origin(origin='*', headers=['Content-Type','Authorization'])
+def admin():
+	if request.is_json:
+		data = request.get_json()
+		manager.setDataAdmin(data)
+		return jsonify({'status':True})
+
+
 @app.route('/add', methods = ['POST'])
 @cross_origin(origin='*', headers=['Content-Type','Authorization'])
 def addAgent():

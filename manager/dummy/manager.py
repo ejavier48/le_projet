@@ -15,6 +15,8 @@ from datetime import datetime
 
 from threading import Thread
 
+import tempfile
+
 #smtp
 import smtplib
 from email.mime.image import MIMEImage
@@ -24,7 +26,7 @@ from email.mime.text import MIMEText
 import rrdtool
 
 mailsender = "ejsanchezg96@gmail.com"
-mailreceip = "ejsanchezg96@gmail.com"
+mailreceip = ""
 mailserver = 'smtp.gmail.com: 587'
 password = 'android15'#add password
 
@@ -130,6 +132,12 @@ class ManagerSNMP():
 		'''
 
 	def _getBasicData(self, hostname):
+		if self._agents[hostname].getCommunity() == 'variation/virtualtable':
+			self._createRRD(hostname)
+			self._getAgentInterFs(hostname)
+			print self._agents[hostname].getDict()
+			return True
+
 		try:
 			eIndi, eStatus, eIndex, vBinds = next(
 				getCmd(SnmpEngine(),
@@ -394,9 +402,10 @@ class ManagerSNMP():
 							outData = int(a[1]) 
 							
 							nRRD = s.format(hostname, i, 'rrd')
-							value = ':'.join(['N', str(inData)])#, str(outData)])
+							value = ':'.join(['N', str(inData), str(outData)])
 							
 							ret = rrdtool.update(nRRD, value)
+							self._checkAberration(nRRD)
 
 						else:
 							print 'Error', i
@@ -586,6 +595,11 @@ class ManagerSNMP():
 
 	def _createRRD(self, hostname):
 
+		self._step = 5
+		self._rrdSize = 100
+		self._predict = 100
+		self._season = 50
+
 		if True:#try:
 			for fname in self._names:
 
@@ -599,16 +613,16 @@ class ManagerSNMP():
 
 						ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '5',
+									'--step', str(self._step),
 									'DS:in:COUNTER:600:0:U',
-									'RRA:AVERAGE:0.5:1:500',
-									'RRA:HWPREDICT:250:0.1:0.0035:150:3',
-									'RRA:SEASONAL:150:0.1:2',
-									'RRA:DEVSEASONAL:150:0.1:2',
-									'RRA:DEVPREDICT:250:4',
-									'RRA:FAILURES:150:7:9:4')
-									#'DS:out:COUNTER:600:0:U',
-									#'RRA:AVERAGE:0.5:1:2000')
+									'RRA:AVERAGE:0.5:1:' + str(self._rrdSize),
+									'RRA:HWPREDICT:' + str(self._predict) + ':0.8:0.035:' + str(self._season) + ':3',
+									'RRA:SEASONAL:' + str(self._season*2) + ':0.1:2',
+									'RRA:DEVSEASONAL:' + str(self._season*2) + ':0.1:2',
+									'RRA:DEVPREDICT:' + str(self._predict) + ':4',
+									'RRA:FAILURES:' + str(self._season*2) + ':7:9:4',
+									'DS:out:COUNTER:600:0:U',
+									'RRA:AVERAGE:0.5:1:' + str(self._rrdSize))
 
 						if ret:
 							print name, rrdtool.error()
@@ -618,9 +632,9 @@ class ManagerSNMP():
 					name = s.format(hostname, 'rrd')
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '5',
+									'--step', str(self._step),
 									'DS:ram:GAUGE:600:0:U',
-									'RRA:AVERAGE:0.5:2:100')
+									'RRA:AVERAGE:0.5:2:' + str(self._rrdSize))
 					if ret:
 						print name, rrdtool.error()	
 
@@ -632,9 +646,9 @@ class ManagerSNMP():
 
 						ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '5',
+									'--step', str(self._step),
 									'DS:load:GAUGE:600:0:100',
-									'RRA:AVERAGE:0.5:2:100')
+									'RRA:AVERAGE:0.5:2:' + str(self._rrdSize))
 
 						if ret:
 							print name, rrdtool.error()
@@ -644,9 +658,9 @@ class ManagerSNMP():
 					name = s.format(hostname, 'rrd')
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '5',
+									'--step', str(self._step),
 									'DS:hdd:GAUGE:600:0:U',
-									'RRA:AVERAGE:0.5:2:100')
+									'RRA:AVERAGE:0.5:2:' + str(self._rrdSize))
 					if ret:
 						print name, rrdtool.error()	
 				
@@ -655,11 +669,11 @@ class ManagerSNMP():
 
 					ret = rrdtool.create(name, 
 									'--start', 'N', 
-									'--step', '5',
+									'--step', str(self._step),
 									'DS:in:COUNTER:600:0:U',
 									'DS:out:COUNTER:600:0:U',
-									'RRA:AVERAGE:0.5:2:80',
-									'RRA:AVERAGE:0.5:2:100')
+									'RRA:AVERAGE:0.5:2:' + str(self._rrdSize),
+									'RRA:AVERAGE:0.5:2:' + str(self._rrdSize))
 					if ret:
 						print name, rrdtool.error()	
 
@@ -669,15 +683,28 @@ class ManagerSNMP():
 	def _updateRRD(self, hostname):
 		
 		upImgs = 0
+		times = 0
 
 		while(1):
-
-			upImgs+= 1
 				
 			try:
 
+				upImgs+= 1
+
 				if not hostname in self._agents: # check if agent was deleted
 					break # if deleted go next
+
+				
+				if self._agents[hostname].getCommunity() == 'variation/virtualtable':
+					self._getAgentInterFs(hostname)
+					if upImgs == 10:
+						times += 1
+						self._makegraphs(hostname)
+						upImgs = 0
+						if times == 100:
+							self._agents[hostname].sumTime(1)
+							times = 0
+					continue
 
 				self._getAgentData(hostname) #update time up
 
@@ -739,8 +766,12 @@ class ManagerSNMP():
 						i += 1
 
 					if upImgs == 10:
+						times += 1
 						self._makegraphs(hostname)
 						upImgs = 0
+						if times == 100:
+							self._agents[hostname].sumTimeint((self._rrdSize*.5))
+							times = 0
 
 			except (KeyError) as e: #Preventing exception if agent is deleted while working on it
 				print 'problem update'
@@ -772,12 +803,12 @@ class ManagerSNMP():
 									'--start', str(self._agents[hostname].getTime()),
 									'--vertical-label=Bytes/s',
 									'DEF:in='+nRRD+':in:AVERAGE',
-									#'DEF:out='+nRRD+':out:AVERAGE',
+									'DEF:out='+nRRD+':out:AVERAGE',
 									'DEF:pred='+nRRD+':in:HWPREDICT',
 									'DEF:dev='+nRRD+':in:DEVPREDICT',
 									'DEF:fail='+nRRD+':in:FAILURES',
 									'CDEF:sin=in,8,*',
-									#'CDEF:sout=out,8,*',
+									'CDEF:sout=out,8,*',
 									'CDEF:upper=pred,dev,2,*,+',
 									'CDEF:lower=pred,dev,2,*,-',
 									'CDEF:uscale=upper,8,*',
@@ -786,10 +817,9 @@ class ManagerSNMP():
 									'TICK:fail#FDD017:1.0:Failures',
 									'LINE3:sin#00FF00:In Traffic',
 									'LINE3:spred#FF00FF:Prediction',
-									'LINE1:uscale#FF0000:Upper Bound\n',
-									'LINE1:uscale#0000FF:Lower Bound']
-									#'LINE3:sout#000FFF:Out Traffic']
-						print graph
+									'LINE1:uscale#FF0000:Upper Bound',
+									'LINE1:lscale#0000FF:Lower Bound',
+									'LINE3:sout#000FFF:Out Traffic']
 						ret = rrdtool.graph(graph)
 
 				elif fname == self._names[5]:
@@ -1011,6 +1041,61 @@ class ManagerSNMP():
 			print 'problem graphs'
 			return 
 
+	def _checkAberration(self, fname):
+	    rrdtool.dump(fname,'pred2.xml')
+	    """ This will check for begin and end of aberration
+	        in file. Will return:
+	        0 if aberration not found.
+	        1 if aberration begins
+	        2 if aberration ends
+	    """
+	    ab_status = 0
+	    rrdfilename = fname
+
+	    info = rrdtool.info(rrdfilename)
+
+	    #for key in info:
+	    #    print key, '-> ', info[key]
+	    
+	    rrdstep = int(info['step'])
+	    lastupdate = int(info['last_update'])
+	    lastupdate -= lastupdate%rrdstep
+	    previosupdate = lastupdate - rrdstep - 1
+	    graphtmpfile = tempfile.NamedTemporaryFile()
+	    print rrdstep, previosupdate, lastupdate
+	    # Ready to get FAILURES  from rrdfile
+	    # will process failures array values for time of 2 last updates
+	    try:
+	        values = rrdtool.graph(graphtmpfile.name+'F',
+	                           'DEF:f0=' + rrdfilename + ':in:FAILURES:start=' + str(previosupdate) + ':end=' + str(lastupdate),
+	                           'PRINT:f0:MIN:%1.0lf',
+	                           'PRINT:f0:MAX:%1.0lf',
+	                           'PRINT:f0:LAST:%1.0lf')
+	    except (rrdtool.OperationalError) as e:
+	        print e
+	        return 0
+
+	    print (values)
+	    fmin = values[2][0]
+	    fmax = values[2][1]
+	    flast = values[2][2]
+	    print "fmin="+fmin+", fmax="+fmax+",flast="+flast
+	    # check if failure value had changed.
+	    if '-nan' in [fmin, fmax, flast]:
+	        return 0
+
+	    fmin = int(fmin)
+	    fmax = int(fmax)
+	    flast = int(flast)
+
+	    if (fmin != fmax):
+	        if (flast == 1):
+	            ab_status = 1
+	        else:
+	            ab_status = 2
+
+	    return ab_status
+
 	def _getAgentsData(self):
 		try:
 			devices = []
@@ -1184,4 +1269,6 @@ class ManagerSNMP():
 			print 'Error time'
 			return False
 
-
+	def setDataAdmin(self, admin):
+		self._admin = admin
+		mailreceip = admin['email']
