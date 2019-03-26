@@ -79,7 +79,7 @@ abrirPageLimites(){
 
 abrirPagePrediccion(){
   clearInterval(this.intervalo);
-  this.router.navigate(['/prediccion',this.indice]);
+  this.router.navigate(['/prediccion',this.indice, this.agente[0]._hostName]);
 }
 
 

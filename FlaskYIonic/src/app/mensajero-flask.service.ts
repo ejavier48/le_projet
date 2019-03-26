@@ -63,40 +63,20 @@ preguntarPorAlerta(){
             console.log("no hay mensaje :)")
           }
           else{
-
-            let texto="Estimado administrador de red, los siguientes dispositivos requieren su atencion \n"
-
-            for(let i=0; i<Object.keys(res).length; i++ ){
-              texto+="Host: "+res[i]._hostname+" \n"
-              texto+="Recurso  "+res[i]._resource+" \n"
-              texto+="Medicion  "+res[i]._measure+" \n"
-              texto+="Limite  "+res[i]._limit+" \n"
-             texto+="Accion planeada:  "+res[i]._label+" \n"
-              texto+=" \n\n "
+            if(JSON.stringify(res).includes("error")){
+              this.presentAlert("Oops!","No pudimos enviar la notificacion de consumo de recursos :c");
+                //this.deleteAgent(ipAdd,0);
             }
-            Email.send("zildjianremo@gmail.com",
-            "zildjianremo@gmail.com",
-            "SNMP Notificacion de cambio de estado",
-            texto,
-            "smtp25.elasticemail.com",
-            "zildjianremo@gmail.com",
-            "cd26d587-db2c-48f2-9d9d-6da0cc766915",
-            function done(message) {
-              alert(message)
-           }
-         );
+            else{
+              //this.presentAlert("Alerta!","Notificacion de consumo de recursos");
+              console.log("envie la alerta!")
+            }
 
 
          //console.log(texto)
           }
 
-          /*if(JSON.stringify(res).includes("error")){
-            this.presentAlert("Oops!","Parece que hubo un error al agregar el agente :c");
-              //this.deleteAgent(ipAdd,0);
-          }
-          else{
-            this.presentAlert("Perfecto!","Agente dado de alta con exito");
-          }*/
+
 
         },
         err => {
