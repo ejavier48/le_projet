@@ -43,6 +43,7 @@ export class AdministradorPage implements OnInit {
     else{
       this.verMensajeError = false;
       this.FlaskService.guardar_storage(this.nombre, this.tel, this.email);
+      this.FlaskService.addAdmin(this.email);
     }
   }
 

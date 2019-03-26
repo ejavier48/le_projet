@@ -255,6 +255,17 @@ async addAgent(ipAdd:string, comunidad:string, version:string, puerto:string){
 
 }
 
+async addAdmin(correo:string) {
+  console.log("entre a addAdmin");
+  this.http2.post('http://'+this.ipAdd+':'+this.puerto+'/admin',{"email":correo}).subscribe(res=>{
+      console.log("guardo administrador "+JSON.stringify(res));
+
+
+  }, err=>{
+    this.presentAlert("Oops!","No pude guardar administrador: "+err);
+  })
+}
+
 
 async generateImages(ipAdd:string) {
   console.log("entre a delete");

@@ -32,6 +32,7 @@ export class VerAgentePage implements OnInit {
   imagentcp : string = '';
   imagencpu : string = '';
   imagenram : string = '';
+  imagenhdd : string = '';
   imagenudp : string = '';
   imagenesip :string[] = ['', ''];
   imagenesicmp :string[] = ['', ''];
@@ -39,6 +40,7 @@ export class VerAgentePage implements OnInit {
   imagenesudp :string[] = ['', ''];
   imagenescpu: string[] = ['',''];
   imagenesram: string[] = ['',''];
+  imageneshdd: string[] = ['',''];
   index : number = 0;
   tiempo;
   intervalo;
@@ -95,6 +97,7 @@ agregaTimeStamp(){
   this.imagenicmp+="?"+  Math.random().toString(36).substr(2, 9);
   this.imagencpu+="?"+  Math.random().toString(36).substr(2, 9);
   this.imagenram+="?"+  Math.random().toString(36).substr(2, 9);
+  this.imagenhdd+="?"+  Math.random().toString(36).substr(2, 9);
 
   console.log(this.imagentcp);
 }
@@ -110,6 +113,7 @@ agregaTimeStamp(){
         this.imagenicmp = this.imagenesicmp[this.index];
         this.imagencpu = this.imagenescpu[this.index];
         this.imagenram = this.imagenesram[this.index];
+        this.imagenhdd = this.imageneshdd[this.index];
         this.index++;
         this.agregaTimeStamp()
 
@@ -150,6 +154,9 @@ agregaTimeStamp(){
     this.imagenram="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/ram";
     this.imagenesram[0]=this.imagenram;
     this.imagenesram[1]=this.imagenram;
+    this.imagenhdd="http://"+this.ipAdd+":"+this.puerto+"/images/"+this.agente[0]._hostName+"/hdd";
+    this.imageneshdd[0]=this.imagenhdd;
+    this.imageneshdd[1]=this.imagenhdd;
   }
 
   async getData(){
