@@ -27,11 +27,6 @@ from email.mime.text import MIMEText
 
 import rrdtool
 
-mailsender = "ejsanchezg96@gmail.com"
-mailreceip = ""
-mailserver = 'smtp.gmail.com: 587'
-password = 'android15'#add password
-
 class ManagerSNMP():
 	_querys = {
 		'MIB'			: '1.3.6.1.2.1',
@@ -127,6 +122,11 @@ class ManagerSNMP():
 		self._newNotification = []
 
 		self._threads = {}
+
+		self._mailsender = "ejsanchezg96@gmail.com"
+		self._mailreceip = ""
+		self._mailserver = 'smtp.gmail.com: 587'
+		self._password = 'android15'#add self._password
 		'''
 		self._thread = Thread(target = self._updateRRD, args = ())
 		self._thread.daemon = True
@@ -238,8 +238,8 @@ class ManagerSNMP():
 	def _sendMail(self, noti):
 		try:
 			print 'Notification'
-			print mailreceip
-			if noti.getLabel() != 'Go' and noti.getLabel() != 'Failure Detected':
+			print self._mailreceip
+			if not (noti.getLabel() in ['Go', 'Failure Detected', 'Failure Ended']):
 				print 'Not Go'
 				return
 			self._makegraphs(noti.getHostName())
@@ -247,19 +247,19 @@ class ManagerSNMP():
 			imgPath = noti.getFile()
 			msg = MIMEMultipart()
 			msg['Subject'] = ' '.join([noti.getResource(), 'Surpassed Limit', noti.getLabel()])
-			msg['From'] = mailsender
-			msg['To'] = mailreceip
+			msg['From'] = self._mailsender
+			msg['To'] = self._mailreceip
 			fp = open( imgPath, 'rb')
 			img = MIMEImage(fp.read(), )
 			img.add_header('Content-Disposition', 'attachment; filename= %s' % noti.getResource())
 			fp.close()
 			msg.attach(img)
 			msg.attach(MIMEText(str(noti.getReport()), 'plain'))
-			mserver = smtplib.SMTP(mailserver)
+			mserver = smtplib.SMTP(self._mailserver)
 			mserver.starttls()
 			# Login Credentials for sending the mail
-			mserver.login(mailsender, password)
-			mserver.sendmail(mailsender, mailreceip, msg.as_string())
+			mserver.login(self._mailsender, self._password)
+			mserver.sendmail(self._mailsender, self._mailreceip, msg.as_string())
 			mserver.quit()
 		except KeyError:
 			print 'Error'
@@ -414,14 +414,12 @@ class ManagerSNMP():
 							print 'flag', flag
 							if flag == 1:
 								noti = Notification(hostname, 'Interface ' + str(i+1), 'Failure Detected', None, None, fn)
-								if already:
-									self._sendMail(noti)
-									already = False
+								self._sendMail(noti)
+								already = False
 							elif flag == 2:
-								noti = Notification(hostname, 'Interface ' + str(i+1), 'Failure Detected', None, None, fn)
-								if  not already:
-									self._sendMail(noti)
-									already = True
+								noti = Notification(hostname, 'Interface ' + str(i+1), 'Failure Ended', None, None, fn)
+								self._sendMail(noti)
+								already = True
 						else:
 							print 'Error', i
 
@@ -610,7 +608,7 @@ class ManagerSNMP():
 
 	def _createRRD(self, hostname):
 
-		self._step = 2
+		self._step = 5
 		self._rrdSize = 500/5
 		self._predict = 250/5
 		self._season = 125/5
@@ -1098,16 +1096,16 @@ class ManagerSNMP():
 			maxi = max(data[2][0])
 			mini = min(data[2][0])
 
-		last = data[2][0][1]
+		last = data[2][0][0]
 		print 'go if'
 		if mini != maxi:
 			print 'if'
 			if last == 1:
 				print 'start Failure'
-				return 1
+				return 2
 			else:
 				print 'end Failure'
-				return 2
+				return 1
 		else:
 			print 'Return 0'
 			return 0
@@ -1288,4 +1286,6 @@ class ManagerSNMP():
 	def setDataAdmin(self, admin):
 		print admin
 		self._admin = admin
-		mailreceip = admin['email']
+		self._mailreceip = admin['email']
+		print self._mailreceip
+		return True
