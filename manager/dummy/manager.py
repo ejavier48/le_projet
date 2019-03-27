@@ -15,6 +15,8 @@ from datetime import datetime
 
 from threading import Thread
 
+from math import ceil
+
 import tempfile
 
 #smtp
@@ -121,7 +123,7 @@ class ManagerSNMP():
 		self._agents = {}
 		self._limits = {'RAM': None, 'CPU': None, 'HDD': None, 'Time':300}
 		self._labels = ['Ready', 'Set', 'Go']
-
+		self._contador = 0
 		self._newNotification = []
 
 		self._threads = {}
@@ -236,7 +238,8 @@ class ManagerSNMP():
 	def _sendMail(self, noti):
 		try:
 			print 'Notification'
-			if noti.getLabel() != 'Go':
+			print mailreceip
+			if noti.getLabel() != 'Go' and noti.getLabel() != 'Failure Detected':
 				print 'Not Go'
 				return
 			self._makegraphs(noti.getHostName())
@@ -345,6 +348,7 @@ class ManagerSNMP():
 		
 		if not hostname in self._agents:
 			return
+		already = True
 		try:
 
 			walk = nextCmd(SnmpEngine(),
@@ -402,11 +406,22 @@ class ManagerSNMP():
 							outData = int(a[1]) 
 							
 							nRRD = s.format(hostname, i, 'rrd')
+							fn = s.format(hostname, i, 'png')
 							value = ':'.join(['N', str(inData), str(outData)])
 							
 							ret = rrdtool.update(nRRD, value)
-							self._checkAberration(nRRD)
-
+							flag = self._checkAberration(nRRD)
+							print 'flag', flag
+							if flag == 1:
+								noti = Notification(hostname, 'Interface ' + str(i+1), 'Failure Detected', None, None, fn)
+								if already:
+									self._sendMail(noti)
+									already = False
+							elif flag == 2:
+								noti = Notification(hostname, 'Interface ' + str(i+1), 'Failure Detected', None, None, fn)
+								if  not already:
+									self._sendMail(noti)
+									already = True
 						else:
 							print 'Error', i
 
@@ -595,10 +610,10 @@ class ManagerSNMP():
 
 	def _createRRD(self, hostname):
 
-		self._step = 5
-		self._rrdSize = 100
-		self._predict = 100
-		self._season = 50
+		self._step = 2
+		self._rrdSize = 500/5
+		self._predict = 250/5
+		self._season = 125/5
 
 		if True:#try:
 			for fname in self._names:
@@ -616,11 +631,11 @@ class ManagerSNMP():
 									'--step', str(self._step),
 									'DS:in:COUNTER:600:0:U',
 									'RRA:AVERAGE:0.5:1:' + str(self._rrdSize),
-									'RRA:HWPREDICT:' + str(self._predict) + ':0.8:0.035:' + str(self._season) + ':3',
+									'RRA:HWPREDICT:' + str(self._predict) + ':0.5:0.025:' + str(self._season) + ':3',
 									'RRA:SEASONAL:' + str(self._season*2) + ':0.1:2',
 									'RRA:DEVSEASONAL:' + str(self._season*2) + ':0.1:2',
 									'RRA:DEVPREDICT:' + str(self._predict) + ':4',
-									'RRA:FAILURES:' + str(self._season*2) + ':7:9:4',
+									'RRA:FAILURES:' + str(self._season*2) + ':5:5:4',
 									'DS:out:COUNTER:600:0:U',
 									'RRA:AVERAGE:0.5:1:' + str(self._rrdSize))
 
@@ -684,6 +699,7 @@ class ManagerSNMP():
 		
 		upImgs = 0
 		times = 0
+		already = True
 
 		while(1):
 				
@@ -765,12 +781,12 @@ class ManagerSNMP():
 								break
 						i += 1
 
-					if upImgs == 10:
+					if upImgs == self._step:
 						times += 1
 						self._makegraphs(hostname)
 						upImgs = 0
 						if times == 100:
-							self._agents[hostname].sumTimeint((self._rrdSize*.5))
+							self._agents[hostname].sumTime(int(ceil(self._rrdSize*1)))
 							times = 0
 
 			except (KeyError) as e: #Preventing exception if agent is deleted while working on it
@@ -781,7 +797,7 @@ class ManagerSNMP():
 				print 'lallaa ' + hostname
 				continue
 
-			sleep(.75)
+			sleep(1)
 
 	def _makegraphs(self, hostname):
 
@@ -819,7 +835,7 @@ class ManagerSNMP():
 									'LINE3:spred#FF00FF:Prediction',
 									'LINE1:uscale#FF0000:Upper Bound',
 									'LINE1:lscale#0000FF:Lower Bound',
-									'LINE3:sout#000FFF:Out Traffic']
+									'LINE3:sout#000000:Out Traffic']
 						ret = rrdtool.graph(graph)
 
 				elif fname == self._names[5]:
@@ -1042,59 +1058,59 @@ class ManagerSNMP():
 			return 
 
 	def _checkAberration(self, fname):
-	    rrdtool.dump(fname,'pred2.xml')
-	    """ This will check for begin and end of aberration
-	        in file. Will return:
-	        0 if aberration not found.
-	        1 if aberration begins
-	        2 if aberration ends
-	    """
-	    ab_status = 0
-	    rrdfilename = fname
+		""" This will check for begin and end of aberration
+			in file. Will return:
+			0 if aberration not found.
+			1 if aberration begins
+			2 if aberration ends
+		"""
+		ab_status = 0
+		rrdfilename = fname
 
-	    info = rrdtool.info(rrdfilename)
+		info = rrdtool.info(rrdfilename)
 
-	    #for key in info:
-	    #    print key, '-> ', info[key]
-	    
-	    rrdstep = int(info['step'])
-	    lastupdate = int(info['last_update'])
-	    lastupdate -= lastupdate%rrdstep
-	    previosupdate = lastupdate - rrdstep - 1
-	    graphtmpfile = tempfile.NamedTemporaryFile()
-	    print rrdstep, previosupdate, lastupdate
-	    # Ready to get FAILURES  from rrdfile
-	    # will process failures array values for time of 2 last updates
-	    try:
-	        values = rrdtool.graph(graphtmpfile.name+'F',
-	                           'DEF:f0=' + rrdfilename + ':in:FAILURES:start=' + str(previosupdate) + ':end=' + str(lastupdate),
-	                           'PRINT:f0:MIN:%1.0lf',
-	                           'PRINT:f0:MAX:%1.0lf',
-	                           'PRINT:f0:LAST:%1.0lf')
-	    except (rrdtool.OperationalError) as e:
-	        print e
-	        return 0
+		#for key in info:
+		#	print key, '-> ', info[key]
+		
+		rrdstep = int(info['step'])
+		lastupdate = int(info['last_update'])
+		previosupdate = lastupdate - rrdstep - 1
+		graphtmpfile = tempfile.NamedTemporaryFile()
+		# Ready to get FAILURES  from rrdfile
+		# will process failures array values for time of 2 last updates
+		try:
+			data = rrdtool.fetch(rrdfilename, 'FAILURES', '--start', str(previosupdate), '--end', str(lastupdate))
+		except (rrdtool.OperationalError) as e:
+			print e
+			return 0
 
-	    print (values)
-	    fmin = values[2][0]
-	    fmax = values[2][1]
-	    flast = values[2][2]
-	    print "fmin="+fmin+", fmax="+fmax+",flast="+flast
-	    # check if failure value had changed.
-	    if '-nan' in [fmin, fmax, flast]:
-	        return 0
+		print (data)
 
-	    fmin = int(fmin)
-	    fmax = int(fmax)
-	    flast = int(flast)
+		if None in  data[2][0]:
+			return 0
 
-	    if (fmin != fmax):
-	        if (flast == 1):
-	            ab_status = 1
-	        else:
-	            ab_status = 2
+		mini = 0
+		maxi = 0
+		if len(data[2]) == 3:
+			mini = min(min(data[2][0]), min(data[2][1]))
+			maxi = max(max(data[2][0]), max(data[2][1]))
+		else:
+			maxi = max(data[2][0])
+			mini = min(data[2][0])
 
-	    return ab_status
+		last = data[2][0][1]
+		print 'go if'
+		if mini != maxi:
+			print 'if'
+			if last == 1:
+				print 'start Failure'
+				return 1
+			else:
+				print 'end Failure'
+				return 2
+		else:
+			print 'Return 0'
+			return 0
 
 	def _getAgentsData(self):
 		try:
@@ -1270,5 +1286,6 @@ class ManagerSNMP():
 			return False
 
 	def setDataAdmin(self, admin):
+		print admin
 		self._admin = admin
 		mailreceip = admin['email']
