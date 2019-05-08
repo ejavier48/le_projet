@@ -1,0 +1,4 @@
+aula1pc1.polosoft.mx,A
+10.100.77.225,PTR
+192.168.0.2,PTR
+aula1pc2.polosoft.mx,A
